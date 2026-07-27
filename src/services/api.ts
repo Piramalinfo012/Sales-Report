@@ -1,0 +1,624 @@
+import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord } from '../types';
+import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
+
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhXWGagj_RY-JEkrNaKA2aNjiSlAOJDEYau6Hm7tCfQ4t7Y03aGZBhgkPWfJrslFrdZg/exec';
+
+// Helper to normalize keys from Google Apps Script / Sheet row object
+function normalizeUserData(rawData: Record<string, any>): User {
+  const getVal = (...keys: string[]) => {
+    for (const k of keys) {
+      if (rawData[k] !== undefined && rawData[k] !== null && String(rawData[k]).trim() !== '') {
+        return String(rawData[k]).trim();
+      }
+    }
+    return '';
+  };
+
+  const id = getVal('id', 'ID', 'Id', 'A', '0');
+  const userName = getVal('userName', 'USER NAME', 'USER_NAME', 'username', 'UserName', 'Name', 'C', '2') || id;
+  const roleRaw = getVal('role', 'ROLE', 'Role', 'D', '3') || 'Sales';
+  const role = (roleRaw.toLowerCase().includes('admin') ? 'Admin' : 'Sales') as User['role'];
+  const gmail = getVal('gmail', 'GMAIL', 'Gmail', 'Email', 'E', '4');
+  const manager = getVal('manager', 'MANAGER', 'Manager', 'F', '5') || 'Regional Head';
+  const crm = getVal('crm', 'CRM', 'Crm', 'G', '6') || 'CRM-1001';
+  const profileUrl = getVal('profileUrl', 'PROFILE URL', 'PROFILE_URL', 'ProfileUrl', 'H', '7') ||
+    `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
+
+  return {
+    id,
+    userName,
+    role,
+    gmail,
+    manager,
+    crm,
+    profileUrl,
+  };
+}
+
+// Demo fallback credentials in case Apps Script endpoint is blocked by CORS or offline
+const DEMO_USERS: Record<string, User & { pass: string }> = {
+  ADMIN: {
+    id: 'ADMIN',
+    pass: 'admin123',
+    userName: 'Rajesh Kumar (Admin)',
+    role: 'Admin',
+    gmail: 'admin@enterprise.com',
+    manager: 'Managing Director',
+    crm: 'CRM-ADMIN-01',
+    profileUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
+  },
+  SALES01: {
+    id: 'SALES01',
+    pass: 'sales123',
+    userName: 'Vikram Sharma (Sales Exec)',
+    role: 'Sales',
+    gmail: 'vikram.sharma@enterprise.com',
+    manager: 'Rajesh Kumar',
+    crm: 'CRM-DELHI-402',
+    profileUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80',
+  },
+  SALES02: {
+    id: 'SALES02',
+    pass: 'sales123',
+    userName: 'Ananya Roy (Sales Rep)',
+    role: 'Sales',
+    gmail: 'ananya.roy@enterprise.com',
+    manager: 'Rajesh Kumar',
+    crm: 'CRM-MUMBAI-108',
+    profileUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
+  },
+};
+
+/**
+ * Helper to post row data to Google Apps Script according to doPost(e) e.parameter specification
+ */
+export async function insertSheetRow(sheetName: string, rowArray: any[]): Promise<boolean> {
+  try {
+    const params = new URLSearchParams();
+    params.append('sheetName', sheetName);
+    params.append('action', 'insert');
+    params.append('rowData', JSON.stringify(rowArray));
+
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`Saved ${sheetName} row locally due to network notice:`, err);
+    return false;
+  }
+}
+
+/**
+ * Fetch sheet data using doGet(e) with ?sheet=SheetName
+ */
+export async function fetchSheetData(sheetName: string): Promise<any[][] | null> {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        return json.data;
+      }
+    }
+  } catch (err) {
+    console.warn(`Fetch notice for sheet '${sheetName}':`, err);
+  }
+  return null;
+}
+
+/**
+ * Login function that fetches Users/Login sheet or posts credentials to Google Apps Script.
+ */
+export async function loginWithGoogleSheet(idInput: string, passwordInput: string): Promise<User> {
+  const cleanId = idInput.trim();
+  const cleanPass = passwordInput.trim();
+
+  // Attempt 1: Fetch Login / Users / Data sheet via doGet(?sheet=Login)
+  for (const sheetCandidate of ['Login', 'Users', 'Data']) {
+    const sheetRows = await fetchSheetData(sheetCandidate);
+    if (sheetRows && sheetRows.length > 1) {
+      // Search for matching user in rows (row[0]=ID, row[1]=PASSWORD)
+      for (let i = 1; i < sheetRows.length; i++) {
+        const row = sheetRows[i];
+        if (!row || row.length < 2) continue;
+        const rowId = String(row[0] || '').trim();
+        const rowPass = String(row[1] || '').trim();
+
+        if (rowId.toLowerCase() === cleanId.toLowerCase() && rowPass === cleanPass) {
+          return normalizeUserData({
+            id: row[0],
+            password: row[1],
+            userName: row[2],
+            role: row[3],
+            gmail: row[4],
+            manager: row[5],
+            crm: row[6],
+            profileUrl: row[7],
+          });
+        }
+      }
+    }
+  }
+
+  // Attempt 2: Direct POST with URLSearchParams to Apps Script
+  try {
+    const params = new URLSearchParams();
+    params.append('action', 'login');
+    params.append('id', cleanId);
+    params.append('password', cleanPass);
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+
+    if (response.ok) {
+      const text = await response.text();
+      try {
+        const json = JSON.parse(text);
+        if (json.status === 'error' || json.result === 'error' || json.success === false) {
+          throw new Error(json.message || 'Invalid ID or Password.');
+        }
+
+        const userData = json.user || json.data || json;
+        if (userData && (userData.id || userData.ID || userData['USER NAME'] || userData.userName)) {
+          return normalizeUserData(userData);
+        }
+      } catch (err: any) {
+        if (err.message === 'Invalid ID or Password.') {
+          throw err;
+        }
+      }
+    }
+  } catch (postError: any) {
+    if (postError.message === 'Invalid ID or Password.') {
+      throw postError;
+    }
+    console.warn('GAS POST call notice:', postError);
+  }
+
+  // Fallback check against DEMO_USERS (for offline or initial empty sheet testing)
+  const matchedDemoKey = Object.keys(DEMO_USERS).find(
+    k => k.toLowerCase() === cleanId.toLowerCase()
+  );
+
+  if (matchedDemoKey) {
+    const demoUser = DEMO_USERS[matchedDemoKey];
+    if (demoUser.pass === cleanPass) {
+      const { pass, ...userObj } = demoUser;
+      return userObj;
+    } else {
+      throw new Error('Invalid ID or Password.');
+    }
+  }
+
+  throw new Error('Invalid ID or Password.');
+}
+
+/**
+ * Submit Morning Plan to Google Apps Script
+ */
+export async function submitMorningPlanToSheet(plan: Omit<MorningPlan, 'id' | 'createdAt'>): Promise<MorningPlan> {
+  const newPlan: MorningPlan = {
+    ...plan,
+    meetingDate: getIndianDateString(plan.meetingDate),
+    id: 'MP-' + Date.now(),
+    createdAt: getIndianDateTimeString(),
+  };
+
+  // 6-column format matching Google Sheet tab 'Morning Follow Up':
+  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Remark
+  const morningFollowUpRow = [
+    newPlan.id,
+    newPlan.meetingDate,
+    newPlan.salesPersonName,
+    newPlan.partyName,
+    newPlan.address || newPlan.city || '',
+    newPlan.remarks || newPlan.purpose || '',
+  ];
+
+  const fullRowData = [
+    newPlan.id,
+    newPlan.salesPersonId,
+    newPlan.salesPersonName,
+    newPlan.meetingDate,
+    newPlan.partyName,
+    newPlan.contactPerson,
+    newPlan.mobileNumber,
+    newPlan.city,
+    newPlan.purpose,
+    newPlan.expectedBusiness,
+    newPlan.priority,
+    newPlan.remarks,
+    newPlan.status,
+    newPlan.createdAt,
+    newPlan.latitude || '',
+    newPlan.longitude || '',
+    newPlan.address || '',
+  ];
+
+  await insertSheetRow('Morning Follow Up', morningFollowUpRow);
+  await insertSheetRow('MorningPlan', fullRowData);
+
+  return newPlan;
+}
+
+/**
+ * Fetch Morning Plans from Google Sheet 'Morning Follow Up' tab
+ */
+export async function fetchMorningPlansFromSheet(): Promise<MorningPlan[]> {
+  try {
+    for (const sheetName of ['Morning Follow Up', 'MorningFollowUp', 'MorningPlan']) {
+      const rows = await fetchSheetData(sheetName);
+      if (rows && rows.length > 1) {
+        const plans: MorningPlan[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || !row[0]) continue;
+
+          if (row.length <= 8) {
+            // Standard 'Morning Follow Up' 6-column sheet structure
+            const id = String(row[0] || `MP-${i}`);
+            const meetingDate = getIndianDateString(row[1] || new Date());
+            const salesPersonName = String(row[2] || 'Sales Executive');
+            const partyName = String(row[3] || 'Client Party');
+            const address = String(row[4] || '');
+            const remarks = String(row[5] || '');
+
+            plans.push({
+              id,
+              salesPersonId: 'SALES-' + i,
+              salesPersonName,
+              meetingDate,
+              partyName,
+              contactPerson: partyName,
+              mobileNumber: '',
+              city: address || 'Location',
+              purpose: remarks || 'Client Meeting',
+              expectedBusiness: 0,
+              priority: 'High',
+              remarks,
+              status: 'Submitted',
+              createdAt: getIndianDateTimeString(),
+              address,
+            });
+          } else {
+            // Extended format
+            plans.push({
+              id: String(row[0] || `MP-${i}`),
+              salesPersonId: String(row[1] || 'SALES01'),
+              salesPersonName: String(row[2] || 'Sales Executive'),
+              meetingDate: getIndianDateString(row[3] || new Date()),
+              partyName: String(row[4] || ''),
+              contactPerson: String(row[5] || ''),
+              mobileNumber: String(row[6] || ''),
+              city: String(row[7] || ''),
+              purpose: String(row[8] || ''),
+              expectedBusiness: Number(row[9]) || 0,
+              priority: (row[10] as any) || 'High',
+              remarks: String(row[11] || ''),
+              status: 'Submitted',
+              createdAt: getIndianDateTimeString(row[13] || new Date()),
+              address: String(row[16] || row[7] || ''),
+            });
+          }
+        }
+        if (plans.length > 0) return plans;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch morning plans:', err);
+  }
+  return [];
+}
+
+/**
+ * Submit Evening Report to Google Apps Script
+ */
+export async function submitEveningReportToSheet(report: Omit<EveningReport, 'id' | 'submittedAt'>): Promise<EveningReport> {
+  const newReport: EveningReport = {
+    ...report,
+    followUpDate: report.followUpDate ? getIndianDateString(report.followUpDate) : '',
+    id: report.morningPlanId ? `ER-${report.morningPlanId}` : 'ER-' + Date.now(),
+    submittedAt: getIndianDateTimeString(),
+  };
+
+  // 10-column format strictly matching Google Sheet tab 'Evening Follow Up':
+  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date
+  const eveningFollowUp10Cols = [
+    newReport.morningPlanId || newReport.id,
+    newReport.meetingDate ? getIndianDateString(newReport.meetingDate) : getIndianDateString(),
+    newReport.salesPersonName || '',
+    newReport.partyName || '',
+    newReport.address || '',
+    newReport.client || '',
+    newReport.contactNumber || '',
+    newReport.designation || '',
+    newReport.remarks || newReport.discussion || '',
+    newReport.followUpDate ? getIndianDateString(newReport.followUpDate) : '',
+  ];
+
+  const fullRowData = [
+    newReport.id,
+    newReport.morningPlanId || '',
+    newReport.salesPersonId,
+    newReport.salesPersonName,
+    newReport.partyName,
+    newReport.visited || 'Yes',
+    newReport.meetingTime || '',
+    newReport.discussion || newReport.remarks || '',
+    newReport.productsDiscussed || '',
+    newReport.requirement || '',
+    newReport.followUpDate || '',
+    newReport.expectedOrder || 0,
+    newReport.orderProbability || 0,
+    newReport.remarks || '',
+    newReport.status || 'Completed',
+    newReport.submittedAt,
+    newReport.photoUrl || '',
+    newReport.latitude || '',
+    newReport.longitude || '',
+    newReport.address || '',
+  ];
+
+  await insertSheetRow('Evening Follow Up', eveningFollowUp10Cols);
+  await insertSheetRow('EveningReport', fullRowData);
+
+  return newReport;
+}
+
+/**
+ * Fetch Evening Reports from Google Sheet 'Evening Follow Up' tab
+ */
+export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
+  try {
+    for (const sheetName of ['Evening Follow Up', 'EveningFollowUp', 'EveningReport']) {
+      const rows = await fetchSheetData(sheetName);
+      if (rows && rows.length > 1) {
+        const reports: EveningReport[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || !row[0]) continue;
+
+          if (row.length <= 12) {
+            // 10-column format: Uid | Date | Sales Person Name | Company Name | Address | Client | Contact Number | Designation | Remarks | Next Follow Up Date
+            const uid = String(row[0] || `ER-${i}`);
+            const date = getIndianDateString(row[1] || new Date());
+            const salesPersonName = String(row[2] || '');
+            const partyName = String(row[3] || '');
+            const address = String(row[4] || '');
+            const client = String(row[5] || '');
+            const contactNumber = String(row[6] || '');
+            const designation = String(row[7] || '');
+            const remarks = String(row[8] || '');
+            const followUpDate = getIndianDateString(row[9] || '');
+
+            reports.push({
+              id: uid,
+              morningPlanId: uid,
+              salesPersonId: 'SALES-' + i,
+              salesPersonName,
+              meetingDate: date,
+              partyName,
+              address,
+              client,
+              contactNumber,
+              designation,
+              visited: 'Yes',
+              remarks,
+              discussion: remarks,
+              followUpDate,
+              status: 'Completed',
+              submittedAt: getIndianDateTimeString(),
+            });
+          } else {
+            // Extended format
+            reports.push({
+              id: String(row[0] || `ER-${i}`),
+              morningPlanId: String(row[1] || ''),
+              salesPersonId: String(row[2] || 'SALES01'),
+              salesPersonName: String(row[3] || ''),
+              partyName: String(row[4] || ''),
+              visited: (row[5] as any) || 'Yes',
+              meetingTime: String(row[6] || ''),
+              discussion: String(row[7] || ''),
+              productsDiscussed: String(row[8] || ''),
+              requirement: String(row[9] || ''),
+              followUpDate: getIndianDateString(row[10] || ''),
+              expectedOrder: Number(row[11]) || 0,
+              orderProbability: Number(row[12]) || 50,
+              remarks: String(row[13] || ''),
+              status: 'Completed',
+              submittedAt: getIndianDateTimeString(row[15] || new Date()),
+              photoUrl: String(row[16] || ''),
+              address: String(row[19] || ''),
+            });
+          }
+        }
+        if (reports.length > 0) return reports;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch evening reports:', err);
+  }
+  return [];
+}
+
+/**
+ * Save GPS Tracking location record to Google Sheet
+ */
+export async function saveGPSToSheet(record: Omit<GPSRecord, 'id'>): Promise<GPSRecord> {
+  const gpsRecord: GPSRecord = {
+    ...record,
+    date: getIndianDateString(record.date),
+    time: record.time || getIndianTimeString(),
+    id: 'GPS-' + Date.now(),
+  };
+
+  const rowData = [
+    gpsRecord.id,
+    gpsRecord.salesPersonId,
+    gpsRecord.salesPersonName,
+    gpsRecord.latitude,
+    gpsRecord.longitude,
+    gpsRecord.address,
+    gpsRecord.date,
+    gpsRecord.time,
+    gpsRecord.accuracy,
+    gpsRecord.actionSource || '',
+  ];
+
+  await insertSheetRow('GPS', rowData);
+  await insertSheetRow('GPSLogs', rowData);
+
+  return gpsRecord;
+}
+
+/**
+ * Save array of 13-column GPS Excel records directly to Google Sheet 'GPS' tab
+ * Uses parallel execution in chunks for fast dumping
+ */
+export async function saveGPSExcelRowsToSheet(records: GPSExcelRecord[]): Promise<boolean> {
+  try {
+    const allRowArrays = records.map(rec => [
+      rec.transporterName || '',
+      rec.recipientCustomerName || '',
+      rec.vehicleNumber || '',
+      rec.resourceName || '',
+      rec.deviceNumber || '',
+      rec.resultDate || '',
+      rec.address || '',
+      rec.latitude || '',
+      rec.longitude || '',
+      rec.accuracy || '',
+      rec.distance || '',
+      rec.status || '',
+      rec.type || '',
+    ]);
+
+    // 1. Send bulk insert request
+    try {
+      const bulkParams = new URLSearchParams();
+      bulkParams.append('sheetName', 'GPS');
+      bulkParams.append('action', 'insertBulk');
+      bulkParams.append('rowsData', JSON.stringify(allRowArrays));
+      bulkParams.append('rowData', JSON.stringify(allRowArrays));
+
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: bulkParams,
+      }).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+
+    // 2. Dispatch row insertions concurrently in parallel chunks of 15 for fast dump
+    const chunkSize = 15;
+    for (let i = 0; i < allRowArrays.length; i += chunkSize) {
+      const chunk = allRowArrays.slice(i, i + chunkSize);
+      await Promise.allSettled(chunk.map(row => insertSheetRow('GPS', row)));
+    }
+
+    return true;
+  } catch (err) {
+    console.warn('Error saving GPS excel rows to Google Sheet:', err);
+    return false;
+  }
+}
+
+/**
+ * Fetch targets from Google Sheet 'Target' tab
+ */
+export async function fetchTargetsFromSheet(): Promise<TargetRecord[]> {
+  const rows = await fetchSheetData('Target');
+  if (!rows || rows.length <= 1) {
+    return [];
+  }
+
+  const targets: TargetRecord[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0 || !row[0]) continue;
+
+    targets.push({
+      id: String(row[0] || `TGT-${i}`),
+      timestamp: getIndianDateTimeString(row[1] || new Date()),
+      month: String(row[2] || ''),
+      salesPersonName: String(row[3] || 'All Sales Reps'),
+      totalNewOrders: Number(row[4]) || 0,
+      amount: Number(row[5]) || 0,
+      remark: String(row[6] || ''),
+    });
+  }
+
+  return targets;
+}
+
+/**
+ * Assign and save a new target to Google Sheet 'Target' tab
+ */
+export async function assignTargetToSheet(target: Omit<TargetRecord, 'id' | 'timestamp'>): Promise<TargetRecord> {
+  const newTarget: TargetRecord = {
+    ...target,
+    id: 'TGT-' + Date.now(),
+    timestamp: getIndianDateTimeString(),
+  };
+
+  await insertSheetRow('Target', [
+    newTarget.id,
+    newTarget.timestamp,
+    newTarget.month,
+    newTarget.salesPersonName,
+    newTarget.totalNewOrders,
+    newTarget.amount,
+    newTarget.remark,
+  ]);
+
+  return newTarget;
+}
+
+/**
+ * Fetch list of sales person names from Column C (USER NAME) of the 'Login' sheet
+ */
+export async function fetchSalesPersonsFromLoginSheet(): Promise<string[]> {
+  const defaultSalesPersons = [
+    'Atul Baghmar',
+    'Pamendra Singh Rajput',
+    'Neha Garg',
+    'Pradeep Kumar',
+    'ADMIN',
+    'Anas Siddique',
+    'Vivek Yadav',
+    'Jaspreet Singh',
+    'Bhushan Singh Chouhan',
+    'Pankaj Kumar',
+    'Devi Naidu',
+  ];
+
+  try {
+    for (const sheetCandidate of ['Login', 'Users', 'Data']) {
+      const rows = await fetchSheetData(sheetCandidate);
+      if (rows && rows.length > 1) {
+        const names: string[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length < 3) continue;
+          const name = String(row[2] || '').trim(); // Column C is index 2 (USER NAME)
+          if (name && !names.includes(name)) {
+            names.push(name);
+          }
+        }
+        if (names.length > 0) {
+          return names;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch Login sheet salespersons:', err);
+  }
+
+  return defaultSalesPersons;
+}
+

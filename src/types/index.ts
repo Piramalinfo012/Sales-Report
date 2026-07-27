@@ -1,0 +1,147 @@
+export type UserRole = 'Admin' | 'Sales' | 'Manager';
+
+export interface User {
+  id: string;
+  password?: string;
+  userName: string;
+  role: UserRole;
+  gmail: string;
+  manager: string;
+  crm: string;
+  profileUrl: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface MorningPlan {
+  id: string;
+  salesPersonId: string;
+  salesPersonName: string;
+  meetingDate: string;
+  partyName: string;
+  contactPerson: string;
+  mobileNumber: string;
+  city: string;
+  purpose: string;
+  expectedBusiness: number;
+  priority: 'High' | 'Medium' | 'Low';
+  remarks: string;
+  status: 'Pending' | 'Submitted' | 'Completed';
+  createdAt: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+}
+
+export interface EveningReport {
+  id: string;
+  morningPlanId?: string;
+  salesPersonId: string;
+  salesPersonName: string;
+  meetingDate?: string;
+  partyName: string;
+  address?: string;
+  client?: string;
+  contactNumber?: string;
+  designation?: string;
+  visited: 'Yes' | 'No';
+  meetingTime?: string;
+  discussion?: string;
+  productsDiscussed?: string;
+  requirement?: string;
+  followUpDate: string;
+  expectedOrder?: number;
+  orderProbability?: number; // percentage
+  remarks: string;
+  photoUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  status: 'Completed' | 'Pending';
+  submittedAt: string;
+}
+
+export interface GPSRecord {
+  id: string;
+  salesPersonId: string;
+  salesPersonName: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  date: string;
+  time: string;
+  accuracy: number;
+  actionSource?: string; // e.g. "Morning Plan", "Evening Report", "Manual Check-in"
+}
+
+export interface GPSExcelRecord {
+  id?: string;
+  transporterName: string;
+  recipientCustomerName: string;
+  vehicleNumber: string;
+  resourceName: string;
+  deviceNumber: string;
+  resultDate: string;
+  address: string;
+  latitude: string | number;
+  longitude: string | number;
+  accuracy: string | number;
+  distance: string | number;
+  status: string;
+  type: string;
+  uploadedAt?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  salesPersonId: string;
+  salesPersonName: string;
+  date: string;
+  punchInTime: string;
+  punchOutTime?: string;
+  punchInLocation?: string;
+  punchOutLocation?: string;
+  status: 'Present' | 'Late' | 'Half Day' | 'Absent';
+}
+
+export interface Customer {
+  id: string;
+  partyName: string;
+  contactPerson: string;
+  mobileNumber: string;
+  city: string;
+  crmId: string;
+  totalOrders: number;
+  lastVisitDate: string;
+}
+
+export interface TargetRecord {
+  id: string;
+  timestamp: string;
+  month: string;
+  salesPersonName: string;
+  totalNewOrders: number;
+  amount: number;
+  remark: string;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  message: string;
+}
+
+export interface ReportFilter {
+  startDate: string;
+  endDate: string;
+  salesPersonId: string;
+  managerName: string;
+  city: string;
+  status: string;
+  product: string;
+}

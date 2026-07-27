@@ -1,0 +1,6 @@
+{
+  "name": "Sales Daily Reporting System",
+  "description": "Enterprise level sales daily reporting system with Google Sheets integration, morning plans, evening reports, and GPS tracking.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
