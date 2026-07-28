@@ -30,60 +30,71 @@ export const SalesAutoTracker: React.FC = () => {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const acc = position.coords.accuracy;
-        addLog(`Got location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'info');
+    const getPosition = (options: PositionOptions): Promise<GeolocationPosition> => {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    };
 
-        const now = new Date();
-        const d = String(now.getDate()).padStart(2, '0');
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const y = now.getFullYear();
-        const time = now.toLocaleTimeString('en-US', { hour12: false });
-        const dateStr = `${d}-${m}-${y} ${time}`;
-
-        let address = 'Location Found';
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.display_name) {
-              // Get a shorter version of the address (e.g. street, city, state)
-              const parts = data.display_name.split(', ');
-              address = parts.slice(0, 4).join(', '); 
-            }
-          }
-        } catch (e) {
-          console.warn('Geocoding failed', e);
+    try {
+      // First try with high accuracy
+      let position: GeolocationPosition;
+      try {
+        position = await getPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+      } catch (err: any) {
+        // If timeout or unavailable, fallback to low accuracy
+        if (err.code === 3 || err.code === 2) {
+          addLog('High accuracy failed, trying standard...', 'warn');
+          position = await getPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+        } else {
+          throw err;
         }
+      }
 
-        const rowData = [
-          '', '', '', authState.user?.userName || deviceNumber, deviceNumber, dateStr, address, lat, lng, acc
-        ];
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const acc = position.coords.accuracy;
+      addLog(`Got location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'info');
 
-        try {
-          addLog('Syncing to Google Sheets...', 'info');
-          const success = await insertSheetRow('GPS', rowData);
-          if (success) {
-            addLog('Successfully saved to GPS sheet!', 'success');
-          } else {
-            addLog('Failed to save to sheet. Retrying next cycle.', 'warn');
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const y = now.getFullYear();
+      const time = now.toLocaleTimeString('en-US', { hour12: false });
+      const dateStr = `${d}-${m}-${y} ${time}`;
+
+      let address = 'Location Found';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.display_name) {
+            const parts = data.display_name.split(', ');
+            address = parts.slice(0, 4).join(', '); 
           }
-        } catch (err) {
-          addLog('Network error while syncing.', 'error');
         }
-      },
-      (error) => {
-        let errStr = 'Unknown GPS Error';
-        if (error.code === 1) errStr = 'Permission Denied. Please allow location access.';
-        if (error.code === 2) errStr = 'Position Unavailable. Turn on GPS.';
-        if (error.code === 3) errStr = 'Timeout getting location.';
-        addLog(errStr, 'error');
-      },
-      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
-    );
+      } catch (e) {
+        console.warn('Geocoding failed', e);
+      }
+
+      const rowData = [
+        '', '', '', authState.user?.userName || deviceNumber, deviceNumber, dateStr, address, lat, lng, acc
+      ];
+
+      addLog('Syncing to Google Sheets...', 'info');
+      const success = await insertSheetRow('GPS', rowData);
+      if (success) {
+        addLog('Successfully saved to GPS sheet!', 'success');
+      } else {
+        addLog('Failed to save to sheet. Retrying next.', 'warn');
+      }
+    } catch (error: any) {
+      let errStr = 'Unknown GPS Error';
+      if (error.code === 1) errStr = 'Permission Denied. Please allow location access.';
+      if (error.code === 2) errStr = 'Position Unavailable. Turn on GPS.';
+      if (error.code === 3) errStr = 'Timeout getting location. Try going outside.';
+      addLog(errStr, 'error');
+    }
   };
 
   const toggleTracking = () => {
