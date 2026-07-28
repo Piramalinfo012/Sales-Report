@@ -44,8 +44,23 @@ export const SalesAutoTracker: React.FC = () => {
         const time = now.toLocaleTimeString('en-US', { hour12: false });
         const dateStr = `${d}-${m}-${y} ${time}`;
 
+        let address = 'Location Found';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.display_name) {
+              // Get a shorter version of the address (e.g. street, city, state)
+              const parts = data.display_name.split(', ');
+              address = parts.slice(0, 4).join(', '); 
+            }
+          }
+        } catch (e) {
+          console.warn('Geocoding failed', e);
+        }
+
         const rowData = [
-          '', '', '', authState.user?.userName || deviceNumber, deviceNumber, dateStr, 'Auto Tracked via App (Background)', lat, lng, acc
+          '', '', '', authState.user?.userName || deviceNumber, deviceNumber, dateStr, address, lat, lng, acc
         ];
 
         try {
