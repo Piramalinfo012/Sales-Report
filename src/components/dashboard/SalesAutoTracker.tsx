@@ -11,6 +11,10 @@ export const SalesAutoTracker: React.FC = () => {
   const [logs, setLogs] = useState<{ time: string; msg: string; type: string }[]>([]);
   
   const intervalRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Tiny silent WAV base64
+  const silentWav = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
 
   const addLog = (msg: string, type: 'info' | 'success' | 'error' | 'warn' = 'info') => {
     const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -40,19 +44,8 @@ export const SalesAutoTracker: React.FC = () => {
         const time = now.toLocaleTimeString('en-US', { hour12: false });
         const dateStr = `${d}-${m}-${y} ${time}`;
 
-        // Row structure for "GPS" sheet:
-        // A: Transporter, B: Recipient, C: Vehicle, D: Resource, E: Device, F: Date, G: Address, H: Lat, I: Lng, J: Accuracy
         const rowData = [
-          '', // Transporter
-          '', // Recipient
-          '', // Vehicle
-          authState.user?.userName || deviceNumber, // Resource Name
-          deviceNumber, // Device Number
-          dateStr, // Result Date
-          'Auto Tracked via App', // Address
-          lat,
-          lng,
-          acc
+          '', '', '', authState.user?.userName || deviceNumber, deviceNumber, dateStr, 'Auto Tracked via App (Background)', lat, lng, acc
         ];
 
         try {
@@ -74,7 +67,7 @@ export const SalesAutoTracker: React.FC = () => {
         if (error.code === 3) errStr = 'Timeout getting location.';
         addLog(errStr, 'error');
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
 
@@ -87,13 +80,22 @@ export const SalesAutoTracker: React.FC = () => {
     if (isTracking) {
       setIsTracking(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       addLog('Tracking stopped.', 'warn');
     } else {
       if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, {enableHighAccuracy: true});
       }
       setIsTracking(true);
-      addLog(`Started auto-tracking every ${intervalMins} minute(s).`, 'success');
+      
+      // Play silent audio to keep JS running in background
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log('Audio play error:', e));
+      }
+
+      addLog(`Started background tracking every ${intervalMins} minute(s).`, 'success');
       
       syncLocation();
 
@@ -106,11 +108,14 @@ export const SalesAutoTracker: React.FC = () => {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (audioRef.current) audioRef.current.pause();
     };
   }, []);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4">
+      {/* Hidden audio element for background execution hack */}
+      <audio ref={audioRef} src={silentWav} loop playsInline muted={false} className="hidden" />
       
       <div className="absolute top-4 right-4 flex items-center gap-4">
          <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-bold text-slate-300">
