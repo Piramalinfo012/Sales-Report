@@ -101,14 +101,14 @@ export const LoginPage: React.FC = () => {
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/40 text-sky-400 text-xs font-medium mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Google Sheets Connected CRM</span>
+            <span>Enterprise CRM Portal</span>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Enterprise Sales Daily Portal
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Sign in with your Google Sheet credentials
+            Sign in with your account credentials
           </p>
         </div>
 
@@ -217,7 +217,7 @@ export const LoginPage: React.FC = () => {
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-white" />
-                <span>Verifying with Google Sheet...</span>
+                <span>Authenticating Credentials...</span>
               </>
             ) : (
               <>
@@ -232,7 +232,7 @@ export const LoginPage: React.FC = () => {
         <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
           <p className="text-xs text-slate-400 mb-3 flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Pre-configured Sheet Roles for Evaluation</span>
+            <span>Pre-configured Roles for Evaluation</span>
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -272,17 +272,17 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-white">Reset Password</h3>
-                  <p className="text-xs text-slate-400">Google Sheet Security Notice</p>
+                  <p className="text-xs text-slate-400">Password Reset Security Notice</p>
                 </div>
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                Passwords are authenticated directly against the Google Sheet database column <span className="text-sky-400 font-mono">Login!B (PASSWORD)</span>.
-                Please contact your Sales Manager or Administrator to update your password in the Google Sheet.
+                Passwords are authenticated directly against the secure database system.
+                Please contact your Sales Manager or Administrator to update your password.
               </p>
 
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs font-mono text-slate-400 mb-5">
-                Sheet Name: Login<br />
+                Support Domain: Enterprise CRM<br />
                 Admin Contact: info@piramalpetroleum.com
               </div>
 

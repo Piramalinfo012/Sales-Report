@@ -57,7 +57,7 @@ export const CustomersModule: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Customer CRM Directory</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Party master database linked with Google Sheets & CRM accounts
+              Party master database and CRM accounts directory
             </p>
           </div>
         </div>

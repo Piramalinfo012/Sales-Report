@@ -30,7 +30,7 @@ export const UserProfileModule: React.FC = () => {
       setCurrentPass('');
       setNewPass('');
       setConfirmPass('');
-      showToast('success', 'Password Updated', 'Your password was changed. Make sure to update Google Sheet if required.');
+      showToast('success', 'Password Updated', 'Your password was changed successfully.');
     }, 1000);
   };
 

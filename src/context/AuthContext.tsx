@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer } from '../types';
-import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet } from '../services/api';
+import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer, ReferenceRecord } from '../types';
+import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet } from '../services/api';
 import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
 
 interface AuthContextType {
@@ -28,6 +28,9 @@ interface AuthContextType {
   addAttendanceRecord: (rec: AttendanceRecord) => void;
   customers: Customer[];
   addCustomer: (cust: Customer) => void;
+  references: ReferenceRecord[];
+  addReference: (ref: ReferenceRecord) => void;
+  refreshReferences: () => Promise<void>;
 }
 
 const LOCAL_STORAGE_USER_KEY = 'sales_reporting_user';
@@ -176,6 +179,37 @@ const INITIAL_CUSTOMERS: Customer[] = [
   },
 ];
 
+const INITIAL_REFERENCES: ReferenceRecord[] = [
+  {
+    id: 'REF-101',
+    refGivenBy: 'Rajesh Sharma',
+    refGivenCompanyName: 'Apex Industries',
+    allottedToSalesPersonName: 'Atul Baghmar',
+    allottedByWhom: 'Rajesh Kumar',
+    companyName: 'Surya Petrochem Pvt Ltd',
+    clientName: 'Sanjay Verma',
+    designation: 'Procurement Head',
+    clientNumber: '+91 98765 43210',
+    address: 'Plot 45, Industrial Zone, Indore, MP',
+    remarks: 'Interested in industrial lubricants bulk order',
+    nextFollowupDate: todayDDMMYYYY,
+  },
+  {
+    id: 'REF-102',
+    refGivenBy: 'Amitabh Gupta',
+    refGivenCompanyName: 'Central Logistics Ltd',
+    allottedToSalesPersonName: 'Vikram Sharma',
+    allottedByWhom: 'ADMIN',
+    companyName: 'Mahavir Engineering Works',
+    clientName: 'Pankaj Jain',
+    designation: 'General Manager',
+    clientNumber: '+91 91234 56789',
+    address: 'Sector 3, Pithampur Industrial Area, MP',
+    remarks: 'Requires quotation for hydraulic oils',
+    nextFollowupDate: todayDDMMYYYY,
+  },
+];
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -241,6 +275,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
   });
 
+  const [references, setReferences] = useState<ReferenceRecord[]>(() => {
+    const saved = localStorage.getItem('sales_references');
+    return saved ? JSON.parse(saved) : INITIAL_REFERENCES;
+  });
+
   // Save to LocalStorage on changes
   useEffect(() => {
     localStorage.setItem('sales_morning_plans', JSON.stringify(morningPlans));
@@ -265,6 +304,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('sales_customers', JSON.stringify(customers));
   }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('sales_references', JSON.stringify(references));
+  }, [references]);
 
   // Read saved user on load
   useEffect(() => {
@@ -428,6 +471,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCustomers(prev => [cust, ...prev]);
   };
 
+  const addReference = (ref: ReferenceRecord) => {
+    setReferences(prev => [ref, ...prev]);
+  };
+
+  const refreshReferences = async () => {
+    try {
+      const remoteRefs = await fetchReferencesFromSheet();
+      if (remoteRefs && remoteRefs.length > 0) {
+        setReferences(prev => {
+          const map = new Map<string, ReferenceRecord>();
+          remoteRefs.forEach(r => map.set(r.id, r));
+          prev.forEach(r => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        });
+      }
+    } catch (err) {
+      console.warn('Error fetching references from sheet:', err);
+    }
+  };
+
   const captureGPSLocation = async (actionSource = 'Manual Check-in'): Promise<GPSRecord | null> => {
     if (!authState.user) return null;
 
@@ -497,6 +562,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addAttendanceRecord,
         customers,
         addCustomer,
+        references,
+        addReference,
+        refreshReferences,
       }}
     >
       {children}

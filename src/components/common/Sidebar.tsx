@@ -15,7 +15,8 @@ import {
   LogOut,
   Building2,
   X,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -41,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'evening_report', label: 'Evening Report', icon: Moon },
     { id: 'gps_tracking', label: 'GPS Tracking', icon: Navigation },
     { id: 'customers', label: 'Customers', icon: Users },
+    { id: 'references', label: 'References', icon: UserPlus },
     { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },

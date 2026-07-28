@@ -13,6 +13,7 @@ import { ReportsModule } from '../modules/ReportsModule';
 import { AnalyticsModule } from '../modules/AnalyticsModule';
 import { UserProfileModule } from '../modules/UserProfileModule';
 import { SettingsModule } from '../modules/SettingsModule';
+import { ReferencesModule } from '../modules/ReferencesModule';
 
 export type NavigationTab =
   | 'dashboard'
@@ -21,6 +22,7 @@ export type NavigationTab =
   | 'evening_report'
   | 'gps_tracking'
   | 'customers'
+  | 'references'
   | 'reports'
   | 'analytics'
   | 'settings'

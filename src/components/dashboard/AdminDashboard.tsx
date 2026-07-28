@@ -98,7 +98,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Executive Control Panel</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time Sales Activity & Google Sheets Master Summary
+            Real-time Sales Activity & Performance Master Summary
           </p>
         </div>
       </div>

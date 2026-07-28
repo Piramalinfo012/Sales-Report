@@ -143,12 +143,12 @@ export const TargetModule: React.FC = () => {
       });
 
       setTargets(prev => [newRecord, ...prev]);
-      showToast('success', 'Target Assigned!', `Target successfully assigned to ${salesPersonName} in Google Sheet.`);
+      showToast('success', 'Target Assigned!', `Target successfully assigned to ${salesPersonName}.`);
 
       // Reset form defaults
       setRemark('');
     } catch (err: any) {
-      showToast('error', 'Assignment Error', err.message || 'Failed to record target in Google Sheet.');
+      showToast('error', 'Assignment Error', err.message || 'Failed to record target.');
     } finally {
       setIsAssigning(false);
     }
@@ -190,11 +190,11 @@ export const TargetModule: React.FC = () => {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-white tracking-tight">Sales Target Assignment</h1>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/80 font-mono font-semibold">
-                Live Google Sheet Connected
+                System Synced
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Assign and monitor monthly sales targets, new order quotas, and revenue goals synchronized with Google Sheets
+              Assign and monitor monthly sales targets, new order quotas, and revenue goals
             </p>
           </div>
         </div>
@@ -205,7 +205,7 @@ export const TargetModule: React.FC = () => {
           className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Sheet Data</span>
+          <span>Refresh Targets</span>
         </button>
       </div>
 
@@ -355,12 +355,12 @@ export const TargetModule: React.FC = () => {
               {isAssigning ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Assigning to Google Sheet...</span>
+                  <span>Assigning Target...</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Assign Target to Sheet</span>
+                  <span>Assign Target</span>
                 </>
               )}
             </button>
@@ -368,12 +368,12 @@ export const TargetModule: React.FC = () => {
         </form>
       </div>
 
-      {/* Target Sheet Live Data Table */}
+      {/* Target Live Data Table */}
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-sky-400" />
-            <h2 className="font-bold text-base text-white">Target Sheet Records ({filteredTargets.length})</h2>
+            <h2 className="font-bold text-base text-white">Target Records ({filteredTargets.length})</h2>
           </div>
 
           {/* Filters */}
@@ -420,13 +420,13 @@ export const TargetModule: React.FC = () => {
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-400" />
-                    <span>Fetching live records from Google Sheet 'Target'...</span>
+                    <span>Fetching target records...</span>
                   </td>
                 </tr>
               ) : filteredTargets.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
-                    No target records found in 'Target' sheet. Assign a target above to insert data.
+                    No target records found. Assign a target above to insert data.
                   </td>
                 </tr>
               ) : (

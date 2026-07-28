@@ -121,7 +121,7 @@ export const ReportsModule: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Sales Reporting & Export Engine</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Generate Daily, Weekly & Monthly filtered reports synced from Google Sheet
+              Generate Daily, Weekly & Monthly filtered reports and summaries
             </p>
           </div>
         </div>

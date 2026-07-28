@@ -61,7 +61,7 @@ export const GPSTrackingModule: React.FC = () => {
     const ok = await refreshGPSData();
     setIsRefreshing(false);
     if (ok) {
-      showToast('success', 'GPS Sheet Refreshed', 'Latest GPS records loaded from Google Sheet.');
+      showToast('success', 'GPS Refreshed', 'Latest GPS records loaded successfully.');
     } else {
       showToast('info', 'GPS Data Updated', 'GPS records refreshed.');
     }
@@ -223,7 +223,7 @@ export const GPSTrackingModule: React.FC = () => {
       addGPSExcelRecords(parsedRows);
 
       if (success) {
-        showToast('success', 'GPS File Uploaded', `${parsedRows.length} GPS rows successfully stored in Google Sheet 'GPS' tab.`);
+        showToast('success', 'GPS File Uploaded', `${parsedRows.length} GPS rows successfully stored.`);
       } else {
         showToast('info', 'Saved Locally', `${parsedRows.length} GPS rows saved locally.`);
       }
@@ -232,7 +232,7 @@ export const GPSTrackingModule: React.FC = () => {
       setParsedRows([]);
       setActiveTab('excel');
     } catch (err: any) {
-      showToast('error', 'Upload Failed', err.message || 'Could not upload data to Google Sheet.');
+      showToast('error', 'Upload Failed', err.message || 'Could not upload data.');
     } finally {
       setIsUploading(false);
     }
@@ -324,7 +324,7 @@ export const GPSTrackingModule: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Real-Time GPS & Excel Upload</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Upload Excel files or capture live pings to save directly into Google Sheet tab <strong className="text-amber-400 font-semibold">'GPS'</strong>
+              Upload Excel files or capture live pings to record system location data
             </p>
           </div>
         </div>
@@ -335,16 +335,16 @@ export const GPSTrackingModule: React.FC = () => {
             onClick={handleRefreshData}
             disabled={isRefreshing}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-300 font-bold text-xs transition-all disabled:opacity-60 cursor-pointer shadow-md"
-            title="Refresh latest data from Google Sheet GPS tab"
+            title="Refresh latest GPS data"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Syncing...' : 'Refresh GPS Sheet'}</span>
+            <span>{isRefreshing ? 'Syncing...' : 'Refresh GPS Data'}</span>
           </button>
 
           <button
             onClick={handleDownloadSample}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
-            title="Download Excel format matching Google Sheet headers"
+            title="Download sample Excel format"
           >
             <Download className="w-3.5 h-3.5 text-sky-400" />
             <span>Sample Excel</span>
@@ -418,7 +418,7 @@ export const GPSTrackingModule: React.FC = () => {
               <FileSpreadsheet className="w-10 h-10 text-slate-600 mx-auto" />
               <p className="text-slate-300 font-medium text-sm">No Excel GPS Records Found</p>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Click <strong className="text-emerald-400 font-semibold">'Upload GPS Excel File'</strong> above to select and upload your spreadsheet directly into Google Sheet tab <strong className="text-amber-400 font-semibold">'GPS'</strong>.
+                Click <strong className="text-emerald-400 font-semibold">'Upload GPS Excel File'</strong> above to select and upload your spreadsheet into the system.
               </p>
               <button
                 onClick={handleTriggerFileInput}
@@ -576,7 +576,7 @@ export const GPSTrackingModule: React.FC = () => {
                     rel="noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-sky-400 hover:text-sky-300 text-xs font-semibold transition-all shrink-0"
                   >
-                    <span>View on Google Maps</span>
+                    <span>View Location Map</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </motion.div>
@@ -627,7 +627,7 @@ export const GPSTrackingModule: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400">
-                Verify the 13 columns mapped from your file below. Click <strong className="text-emerald-400 font-semibold">'Upload & Save to GPS Sheet'</strong> to store them into Google Sheet tab <strong className="text-amber-400 font-semibold">'GPS'</strong>.
+                Verify the 13 columns mapped from your file below. Click <strong className="text-emerald-400 font-semibold">'Upload & Save Records'</strong> to store them in the system database.
               </p>
 
               {/* Preview Table */}
@@ -685,12 +685,12 @@ export const GPSTrackingModule: React.FC = () => {
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving to 'GPS' Google Sheet...</span>
+                      <span>Saving Records...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>Upload & Save to GPS Sheet ({parsedRows.length} Rows)</span>
+                      <span>Upload & Save Records ({parsedRows.length} Rows)</span>
                     </>
                   )}
                 </button>

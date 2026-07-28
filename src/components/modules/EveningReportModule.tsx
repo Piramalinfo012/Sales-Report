@@ -152,7 +152,7 @@ export const EveningReportModule: React.FC = () => {
     try {
       const createdReport = await submitEveningReportToSheet(reportData);
       addEveningReport(createdReport);
-      showToast('success', 'Evening Follow Up Saved', `Data for ${partyName} stored in 'Evening Follow Up' Google Sheet.`);
+      showToast('success', 'Evening Follow Up Saved', `Data for ${partyName} saved successfully.`);
 
       setShowModal(false);
       
@@ -331,7 +331,7 @@ export const EveningReportModule: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Evening Follow Up</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Sales Person wise data & updates stored in Google Sheet tab <strong className="text-amber-400 font-semibold">'Evening Follow Up'</strong>
+              Sales Person wise daily follow-up records and updates
             </p>
           </div>
         </div>
@@ -488,7 +488,7 @@ export const EveningReportModule: React.FC = () => {
               {/* Companies List for this Sales Person */}
               <div className="space-y-4">
                 <p className="text-xs text-slate-400">
-                  Select a company below and click <strong className="text-sky-400">Update</strong> to log follow up details into <strong className="text-amber-400 font-semibold">'Evening Follow Up'</strong> sheet.
+                  Select a company below and click <strong className="text-sky-400">Update</strong> to log follow up details.
                 </p>
 
                 <div className="space-y-3">
@@ -603,7 +603,7 @@ export const EveningReportModule: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400">
-                Data entered below will be saved directly into Google Sheet tab <strong className="text-amber-400 font-semibold">'Evening Follow Up'</strong>.
+                Data entered below will be saved directly into the system database.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -741,7 +741,7 @@ export const EveningReportModule: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving to 'Evening Follow Up' Google Sheet...</span>
+                      <span>Saving Evening Follow Up...</span>
                     </>
                   ) : (
                     <>

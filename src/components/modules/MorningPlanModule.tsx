@@ -167,7 +167,7 @@ export const MorningPlanModule: React.FC = () => {
       showToast(
         'success',
         'Morning Follow Up Created',
-        `${count} company ${count > 1 ? 'visits' : 'visit'} recorded in Google Sheet.`
+        `${count} company ${count > 1 ? 'visits' : 'visit'} recorded.`
       );
 
       // Reset form
@@ -687,7 +687,7 @@ export const MorningPlanModule: React.FC = () => {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Saving to Sheet...</span>
+                        <span>Saving Plan...</span>
                       </>
                     ) : (
                       <>

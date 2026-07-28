@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
         <div className="hidden sm:flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            Google Sheet Sync Active
+            System Online & Synced
           </span>
         </div>
 

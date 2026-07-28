@@ -129,6 +129,22 @@ export interface TargetRecord {
   remark: string;
 }
 
+export interface ReferenceRecord {
+  id: string;
+  refGivenBy: string;
+  refGivenCompanyName: string;
+  allottedToSalesPersonName: string;
+  allottedByWhom: string;
+  companyName: string;
+  clientName: string;
+  designation: string;
+  clientNumber: string;
+  address: string;
+  remarks: string;
+  nextFollowupDate: string;
+  createdAt?: string;
+}
+
 export interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';

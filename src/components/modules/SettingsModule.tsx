@@ -15,15 +15,15 @@ export const SettingsModule: React.FC = () => {
     try {
       const res = await fetch(APPS_SCRIPT_URL);
       if (res.ok) {
-        setPingResult(`HTTP ${res.status} OK - Google Apps Script macro endpoint active.`);
-        showToast('success', 'Apps Script Connected', 'Google Apps Script Web App responded successfully.');
+        setPingResult(`HTTP ${res.status} OK - Server API endpoint active.`);
+        showToast('success', 'Server Connected', 'Backend API responded successfully.');
       } else {
         setPingResult(`HTTP ${res.status} - Endpoint responded with status.`);
-        showToast('warning', 'Apps Script Notice', `Response status: ${res.status}`);
+        showToast('warning', 'Server Notice', `Response status: ${res.status}`);
       }
     } catch (err: any) {
       setPingResult(`Fetch Notice: ${err.message || 'CORS / redirect handling active'}. Direct POST payloads are active.`);
-      showToast('info', 'Apps Script Protocol', 'Using direct POST communication mode.');
+      showToast('info', 'API Protocol', 'Using direct POST communication mode.');
     } finally {
       setTestingEndpoint(false);
     }
@@ -39,7 +39,7 @@ export const SettingsModule: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">System Settings & Connection</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Configure Google Sheets Web App endpoint and view system diagnostics
+            Configure backend API endpoint and view system diagnostics
           </p>
         </div>
       </div>
@@ -83,12 +83,12 @@ export const SettingsModule: React.FC = () => {
         </div>
       </div>
 
-      {/* Google Apps Script Status Box */}
+      {/* Server API Status Box */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Server className="w-5 h-5 text-sky-400" />
-            <h2 className="font-bold text-base text-white">Google Apps Script Web App</h2>
+            <h2 className="font-bold text-base text-white">Backend Data Server API</h2>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">
             Connected
@@ -97,7 +97,7 @@ export const SettingsModule: React.FC = () => {
 
         <div className="space-y-3 text-xs">
           <div>
-            <label className="block text-slate-400 font-semibold mb-1">Configured Executable URL</label>
+            <label className="block text-slate-400 font-semibold mb-1">Configured API Endpoint</label>
             <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-sky-300 font-mono text-[11px] break-all">
               {APPS_SCRIPT_URL}
             </div>
@@ -106,7 +106,7 @@ export const SettingsModule: React.FC = () => {
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
             <div className="font-semibold text-slate-200 flex items-center gap-2">
               <Database className="w-4 h-4 text-emerald-400" />
-              <span>Login Sheet Schema Alignment</span>
+              <span>User Account Database Schema</span>
             </div>
             <p className="text-slate-400 leading-relaxed text-[11px]">
               Columns: A=ID, B=PASSWORD, C=USER NAME, D=ROLE, E=GMAIL, F=MANAGER, G=CRM, H=PROFILE URL

@@ -1,4 +1,4 @@
-import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord } from '../types';
+import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord, ReferenceRecord } from '../types';
 import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
 
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhXWGagj_RY-JEkrNaKA2aNjiSlAOJDEYau6Hm7tCfQ4t7Y03aGZBhgkPWfJrslFrdZg/exec';
@@ -688,5 +688,76 @@ export async function fetchSalesPersonsFromLoginSheet(): Promise<string[]> {
   }
 
   return defaultSalesPersons;
+}
+
+/**
+ * Fetch references from Sheet 'Refrences' tab
+ * Columns mapping (11 headers):
+ * 1) ref given by
+ * 2) ref given company's name-
+ * 3) alloted to sales person- Name
+ * 4) alloted by whom
+ * 5) company name
+ * 6) client name
+ * 7) designation
+ * 8) client number
+ * 9) Address
+ * 10) remarks
+ * 11) next followup date
+ */
+export async function fetchReferencesFromSheet(): Promise<ReferenceRecord[]> {
+  const rows = await fetchSheetData('Refrences');
+  if (!rows || rows.length <= 1) {
+    return [];
+  }
+
+  const references: ReferenceRecord[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0 || !row.some(cell => cell)) continue;
+
+    references.push({
+      id: String(row[0] || `REF-${i}`),
+      refGivenBy: String(row[0] || ''),
+      refGivenCompanyName: String(row[1] || ''),
+      allottedToSalesPersonName: String(row[2] || ''),
+      allottedByWhom: String(row[3] || ''),
+      companyName: String(row[4] || ''),
+      clientName: String(row[5] || ''),
+      designation: String(row[6] || ''),
+      clientNumber: String(row[7] || ''),
+      address: String(row[8] || ''),
+      remarks: String(row[9] || ''),
+      nextFollowupDate: String(row[10] || ''),
+    });
+  }
+
+  return references;
+}
+
+/**
+ * Submit Reference to Sheet 'Refrences' tab
+ */
+export async function submitReferenceToSheet(ref: Omit<ReferenceRecord, 'id'>): Promise<ReferenceRecord> {
+  const newRef: ReferenceRecord = {
+    ...ref,
+    id: 'REF-' + Date.now(),
+  };
+
+  await insertSheetRow('Refrences', [
+    newRef.refGivenBy,
+    newRef.refGivenCompanyName,
+    newRef.allottedToSalesPersonName,
+    newRef.allottedByWhom,
+    newRef.companyName,
+    newRef.clientName,
+    newRef.designation,
+    newRef.clientNumber,
+    newRef.address,
+    newRef.remarks,
+    newRef.nextFollowupDate,
+  ]);
+
+  return newRef;
 }
 
