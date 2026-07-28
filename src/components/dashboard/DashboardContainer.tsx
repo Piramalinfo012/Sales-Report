@@ -14,6 +14,7 @@ import { AnalyticsModule } from '../modules/AnalyticsModule';
 import { UserProfileModule } from '../modules/UserProfileModule';
 import { SettingsModule } from '../modules/SettingsModule';
 import { ReferencesModule } from '../modules/ReferencesModule';
+import { SalesAutoTracker } from './SalesAutoTracker';
 
 export type NavigationTab =
   | 'dashboard'
@@ -34,6 +35,14 @@ export const DashboardContainer: React.FC = () => {
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
 
   const role = authState.user?.role;
+
+  if (role === 'Sales') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white relative">
+         <SalesAutoTracker />
+      </div>
+    );
+  }
 
   const renderActiveModule = () => {
     switch (currentTab) {
@@ -61,6 +70,8 @@ export const DashboardContainer: React.FC = () => {
         return <SettingsModule />;
       case 'profile':
         return <UserProfileModule />;
+      case 'references':
+        return <ReferencesModule />;
       default:
         return role === 'Admin' ? (
           <AdminDashboard onNavigate={setCurrentTab} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, Loader2, Sparkles, Building2, HelpCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, ArrowRight, Loader2, Sparkles, Building2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const LoginPage: React.FC = () => {
@@ -41,12 +41,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickDemoFill = (demoId: string, demoPass: string) => {
-    setId(demoId);
-    setPassword(demoPass);
-    setErrorMessage(null);
-  };
-
   return (
     <div className="relative min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 overflow-hidden selection:bg-sky-500 selection:text-white">
       {/* Dynamic Animated Dark Blue Background Orbs */}
@@ -82,34 +76,100 @@ export const LoginPage: React.FC = () => {
 
         {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+
+        {/* Floating light particles */}
+        {[...Array(14)].map((_, i) => (
+          <motion.span
+            key={i}
+            className="absolute rounded-full bg-sky-400/40"
+            style={{
+              left: `${(i * 37) % 100}%`,
+              top: `${(i * 53) % 100}%`,
+              width: `${2 + (i % 3)}px`,
+              height: `${2 + (i % 3)}px`,
+            }}
+            animate={{
+              y: [0, -40, 0],
+              opacity: [0, 0.8, 0],
+            }}
+            transition={{
+              duration: 6 + (i % 5),
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: (i % 7) * 0.6,
+            }}
+          />
+        ))}
       </div>
 
       {/* Main Glassmorphism Card */}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl shadow-slate-950/80"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="group/card relative z-10 w-full max-w-md"
       >
+        {/* Animated conic gradient glow ring behind the card */}
+        <motion.div
+          aria-hidden
+          animate={{ rotate: 360 }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'linear' }}
+          className="absolute -inset-px rounded-3xl opacity-60 blur-lg [background:conic-gradient(from_0deg,transparent,rgba(56,189,248,0.5),transparent_35%,rgba(99,102,241,0.5),transparent_70%)]"
+        />
+        <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl shadow-slate-950/80">
         {/* Company Header Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 p-0.5 shadow-lg shadow-sky-500/20 mb-4 group">
-            <div className="w-full h-full bg-slate-950 rounded-[0.85rem] flex items-center justify-center transition-transform group-hover:scale-95 duration-300">
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 p-0.5 shadow-lg shadow-sky-500/30 mb-4 group"
+          >
+            <motion.div
+              aria-hidden
+              animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.15, 1] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute inset-0 rounded-2xl bg-sky-500/40 blur-xl"
+            />
+            <div className="relative w-full h-full bg-slate-950 rounded-[0.85rem] flex items-center justify-center transition-transform group-hover:scale-95 duration-300">
               <Building2 className="w-8 h-8 text-sky-400" />
             </div>
-          </div>
+          </motion.div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/40 text-sky-400 text-xs font-medium mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/40 text-sky-400 text-xs font-medium mb-3"
+          >
+            <motion.span
+              animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </motion.span>
             <span>Enterprise CRM Portal</span>
-          </div>
+          </motion.div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0, backgroundPosition: ['0% 50%', '200% 50%'] }}
+            transition={{
+              opacity: { delay: 0.28, duration: 0.5 },
+              y: { delay: 0.28, duration: 0.5 },
+              backgroundPosition: { duration: 6, repeat: Infinity, ease: 'linear' },
+            }}
+            className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-sky-300 to-white bg-clip-text text-transparent bg-[length:200%_auto]"
+          >
             Enterprise Sales Daily Portal
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="text-sm text-slate-400 mt-1"
+          >
             Sign in with your account credentials
-          </p>
+          </motion.p>
         </div>
 
         {/* Login Form */}
@@ -130,7 +190,7 @@ export const LoginPage: React.FC = () => {
                   setId(e.target.value);
                   setErrorMessage(null);
                 }}
-                placeholder="e.g. ADMIN or SALES01"
+                placeholder="Enter your User ID"
                 className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-sm"
                 required
                 disabled={isLoading}
@@ -212,47 +272,32 @@ export const LoginPage: React.FC = () => {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="relative w-full py-3.5 px-4 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
           >
+            {/* Moving shine sweep */}
+            {!isLoading && (
+              <motion.span
+                aria-hidden
+                initial={{ x: '-150%' }}
+                animate={{ x: '150%' }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+                className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-white/25 blur-md"
+              />
+            )}
             {isLoading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin text-white" />
-                <span>Authenticating Credentials...</span>
+                <Loader2 className="relative z-10 w-5 h-5 animate-spin text-white" />
+                <span className="relative z-10">Authenticating Credentials...</span>
               </>
             ) : (
               <>
-                <span>Sign In to System</span>
-                <ArrowRight className="w-4 h-4" />
+                <span className="relative z-10">Sign In to System</span>
+                <ArrowRight className="relative z-10 w-4 h-4" />
               </>
             )}
           </motion.button>
         </form>
 
-        {/* Quick Demo Login Credentials Bar */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-          <p className="text-xs text-slate-400 mb-3 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Pre-configured Roles for Evaluation</span>
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemoFill('ADMIN', 'admin123')}
-              className="py-2 px-3 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/30 text-xs text-slate-300 hover:text-white transition-all text-left group"
-            >
-              <div className="font-semibold text-sky-400 group-hover:text-sky-300">Admin Role</div>
-              <div className="text-[11px] text-slate-400">ID: ADMIN</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemoFill('SALES01', 'sales123')}
-              className="py-2 px-3 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-950/30 text-xs text-slate-300 hover:text-white transition-all text-left group"
-            >
-              <div className="font-semibold text-indigo-400 group-hover:text-indigo-300">Sales Role</div>
-              <div className="text-[11px] text-slate-400">ID: SALES01</div>
-            </button>
-          </div>
         </div>
       </motion.div>
 

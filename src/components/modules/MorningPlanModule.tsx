@@ -247,26 +247,31 @@ export const MorningPlanModule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-800/30">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-lg shadow-amber-950/40">
+      <div className="relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm">
+        {/* Soft accent glow — theme-safe */}
+        <div className="pointer-events-none absolute -top-20 -right-10 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl" />
+
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-500/30">
             <Sun className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Morning Follow Up Plans</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Sales team daily planned company visits & follow ups
+              Sales team daily planned company visits &amp; follow ups
             </p>
           </div>
         </div>
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+          className="relative flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Morning Plan</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* Filter and Search Toolbar */}
@@ -339,34 +344,37 @@ export const MorningPlanModule: React.FC = () => {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
-          <div>
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
+          <div className="pl-2">
             <p className="text-xs font-medium text-slate-400">Total Companies Planned</p>
-            <p className="text-2xl font-black text-amber-400 mt-1">{filteredPlans.length}</p>
+            <p className="text-3xl font-black text-amber-400 mt-1 tabular-nums">{filteredPlans.length}</p>
           </div>
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 transition-transform group-hover:scale-110">
             <Building2 className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
-          <div>
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-sky-400 to-blue-500" />
+          <div className="pl-2">
             <p className="text-xs font-medium text-slate-400">Active Sales Executives</p>
-            <p className="text-2xl font-black text-sky-400 mt-1">{groupedBySalesPerson.length}</p>
+            <p className="text-3xl font-black text-sky-400 mt-1 tabular-nums">{groupedBySalesPerson.length}</p>
           </div>
-          <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-400">
+          <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-400 transition-transform group-hover:scale-110">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
-          <div>
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-emerald-400 to-teal-500" />
+          <div className="pl-2">
             <p className="text-xs font-medium text-slate-400">Selected Date</p>
             <p className="text-lg font-bold text-emerald-400 mt-1">
               {selectedDateFilter === 'ALL' ? 'All Records' : selectedDateFilter}
             </p>
           </div>
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 transition-transform group-hover:scale-110">
             <Calendar className="w-6 h-6" />
           </div>
         </div>
@@ -377,19 +385,28 @@ export const MorningPlanModule: React.FC = () => {
         /* Grouped View by Sales Person */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groupedBySalesPerson.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-2">
-              <Users className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-300">No Morning Plans Found</p>
-              <p className="text-xs text-slate-500">
+            <div className="col-span-full flex flex-col items-center justify-center text-center py-16 px-6 bg-slate-900 border border-dashed border-slate-700 rounded-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+                <Sun className="w-8 h-8" />
+              </div>
+              <p className="text-base font-bold text-white">No Morning Plans Found</p>
+              <p className="text-xs text-slate-400 mt-1.5 max-w-sm">
                 No sales executive submitted morning follow-ups for {selectedDateFilter === 'ALL' ? 'the selected search' : selectedDateFilter}.
               </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Morning Plan</span>
+              </button>
             </div>
           ) : (
             groupedBySalesPerson.map((group, groupIdx) => (
               <div
                 key={`group-${group.salesPersonName}-${group.meetingDate}-${groupIdx}`}
                 onClick={() => setSelectedGroupDetails(group)}
-                className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 transition-all space-y-4 cursor-pointer hover:shadow-xl hover:shadow-amber-950/20 group relative overflow-hidden"
+                className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 transition-all duration-200 space-y-4 cursor-pointer hover:shadow-xl hover:shadow-amber-950/20 hover:-translate-y-0.5 group relative overflow-hidden"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -457,9 +474,14 @@ export const MorningPlanModule: React.FC = () => {
         /* Detailed List View */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredPlans.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-slate-900/60 border border-slate-800 rounded-2xl">
-              <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-300">No company plans matching filters</p>
+            <div className="col-span-full flex flex-col items-center justify-center text-center py-16 px-6 bg-slate-900 border border-dashed border-slate-700 rounded-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700 flex items-center justify-center text-slate-400 mb-4">
+                <Building2 className="w-8 h-8" />
+              </div>
+              <p className="text-base font-bold text-white">No Company Plans Found</p>
+              <p className="text-xs text-slate-400 mt-1.5 max-w-sm">
+                Nothing matches the current date or search filters. Try adjusting them.
+              </p>
             </div>
           ) : (
             filteredPlans.map((plan, planIdx) => (

@@ -1,4 +1,4 @@
-import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord, ReferenceRecord } from '../types';
+import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord, ReferenceRecord, LeaveRecord } from '../types';
 import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
 
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhXWGagj_RY-JEkrNaKA2aNjiSlAOJDEYau6Hm7tCfQ4t7Y03aGZBhgkPWfJrslFrdZg/exec';
@@ -34,40 +34,6 @@ function normalizeUserData(rawData: Record<string, any>): User {
     profileUrl,
   };
 }
-
-// Demo fallback credentials in case Apps Script endpoint is blocked by CORS or offline
-const DEMO_USERS: Record<string, User & { pass: string }> = {
-  ADMIN: {
-    id: 'ADMIN',
-    pass: 'admin123',
-    userName: 'Rajesh Kumar (Admin)',
-    role: 'Admin',
-    gmail: 'admin@enterprise.com',
-    manager: 'Managing Director',
-    crm: 'CRM-ADMIN-01',
-    profileUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-  },
-  SALES01: {
-    id: 'SALES01',
-    pass: 'sales123',
-    userName: 'Vikram Sharma (Sales Exec)',
-    role: 'Sales',
-    gmail: 'vikram.sharma@enterprise.com',
-    manager: 'Rajesh Kumar',
-    crm: 'CRM-DELHI-402',
-    profileUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80',
-  },
-  SALES02: {
-    id: 'SALES02',
-    pass: 'sales123',
-    userName: 'Ananya Roy (Sales Rep)',
-    role: 'Sales',
-    gmail: 'ananya.roy@enterprise.com',
-    manager: 'Rajesh Kumar',
-    crm: 'CRM-MUMBAI-108',
-    profileUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
-  },
-};
 
 /**
  * Helper to post row data to Google Apps Script according to doPost(e) e.parameter specification
@@ -177,21 +143,6 @@ export async function loginWithGoogleSheet(idInput: string, passwordInput: strin
       throw postError;
     }
     console.warn('GAS POST call notice:', postError);
-  }
-
-  // Fallback check against DEMO_USERS (for offline or initial empty sheet testing)
-  const matchedDemoKey = Object.keys(DEMO_USERS).find(
-    k => k.toLowerCase() === cleanId.toLowerCase()
-  );
-
-  if (matchedDemoKey) {
-    const demoUser = DEMO_USERS[matchedDemoKey];
-    if (demoUser.pass === cleanPass) {
-      const { pass, ...userObj } = demoUser;
-      return userObj;
-    } else {
-      throw new Error('Invalid ID or Password.');
-    }
   }
 
   throw new Error('Invalid ID or Password.');
@@ -514,12 +465,14 @@ export async function saveGPSExcelRowsToSheet(records: GPSExcelRecord[]): Promis
       // ignore
     }
 
-    // 2. Dispatch row insertions concurrently in parallel chunks of 15 for fast dump
-    const chunkSize = 15;
-    for (let i = 0; i < allRowArrays.length; i += chunkSize) {
-      const chunk = allRowArrays.slice(i, i + chunkSize);
-      await Promise.allSettled(chunk.map(row => insertSheetRow('GPS', row)));
-    }
+    // 2. Dispatch row insertions concurrently in background for fast dump
+    (async () => {
+      const chunkSize = 15;
+      for (let i = 0; i < allRowArrays.length; i += chunkSize) {
+        const chunk = allRowArrays.slice(i, i + chunkSize);
+        await Promise.allSettled(chunk.map(row => insertSheetRow('GPS', row)));
+      }
+    })();
 
     return true;
   } catch (err) {
@@ -692,18 +645,11 @@ export async function fetchSalesPersonsFromLoginSheet(): Promise<string[]> {
 
 /**
  * Fetch references from Sheet 'Refrences' tab
- * Columns mapping (11 headers):
- * 1) ref given by
- * 2) ref given company's name-
- * 3) alloted to sales person- Name
- * 4) alloted by whom
- * 5) company name
- * 6) client name
- * 7) designation
- * 8) client number
- * 9) Address
- * 10) remarks
- * 11) next followup date
+ * Columns mapping (13 headers):
+ * A) Id | B) Created date | C) Ref Given By | D) Ref Given Company'S Name
+ * E) Alloted To Sales Person- Name | F) Alloted By Whom | G) Company Name
+ * H) Client Name | I) Designation | J) Client Number | K) Address
+ * L) Remarks | M) Next Followup Date
  */
 export async function fetchReferencesFromSheet(): Promise<ReferenceRecord[]> {
   const rows = await fetchSheetData('Refrences');
@@ -718,17 +664,18 @@ export async function fetchReferencesFromSheet(): Promise<ReferenceRecord[]> {
 
     references.push({
       id: String(row[0] || `REF-${i}`),
-      refGivenBy: String(row[0] || ''),
-      refGivenCompanyName: String(row[1] || ''),
-      allottedToSalesPersonName: String(row[2] || ''),
-      allottedByWhom: String(row[3] || ''),
-      companyName: String(row[4] || ''),
-      clientName: String(row[5] || ''),
-      designation: String(row[6] || ''),
-      clientNumber: String(row[7] || ''),
-      address: String(row[8] || ''),
-      remarks: String(row[9] || ''),
-      nextFollowupDate: String(row[10] || ''),
+      createdAt: String(row[1] || ''),
+      refGivenBy: String(row[2] || ''),
+      refGivenCompanyName: String(row[3] || ''),
+      allottedToSalesPersonName: String(row[4] || ''),
+      allottedByWhom: String(row[5] || ''),
+      companyName: String(row[6] || ''),
+      clientName: String(row[7] || ''),
+      designation: String(row[8] || ''),
+      clientNumber: String(row[9] || ''),
+      address: String(row[10] || ''),
+      remarks: String(row[11] || ''),
+      nextFollowupDate: String(row[12] || ''),
     });
   }
 
@@ -737,14 +684,20 @@ export async function fetchReferencesFromSheet(): Promise<ReferenceRecord[]> {
 
 /**
  * Submit Reference to Sheet 'Refrences' tab
+ * Writes 13 columns: Id, Created date, Ref Given By, Ref Given Company'S Name,
+ * Alloted To Sales Person- Name, Alloted By Whom, Company Name, Client Name,
+ * Designation, Client Number, Address, Remarks, Next Followup Date
  */
 export async function submitReferenceToSheet(ref: Omit<ReferenceRecord, 'id'>): Promise<ReferenceRecord> {
   const newRef: ReferenceRecord = {
     ...ref,
     id: 'REF-' + Date.now(),
+    createdAt: ref.createdAt || getIndianDateTimeString(),
   };
 
   await insertSheetRow('Refrences', [
+    newRef.id,
+    newRef.createdAt,
     newRef.refGivenBy,
     newRef.refGivenCompanyName,
     newRef.allottedToSalesPersonName,
@@ -759,5 +712,48 @@ export async function submitReferenceToSheet(ref: Omit<ReferenceRecord, 'id'>): 
   ]);
 
   return newRef;
+}
+
+/**
+ * Fetch leave requests from Sheet 'Leave' tab
+ * Columns mapping:
+ * A) Timestamp | B) LR-Unique No. | C) Requested By | D) Departments
+ * E) Total No of leave days | F) Job location | G) Date of leave FROM | H) TO
+ * I) Reason for Taking | J) Remark | K) Image
+ */
+export async function fetchLeavesFromSheet(): Promise<LeaveRecord[]> {
+  const rows = await fetchSheetData('Leave');
+  if (!rows || rows.length <= 1) {
+    return [];
+  }
+
+  const leaves: LeaveRecord[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0 || !row.some(cell => cell)) continue;
+
+    const requestedBy = String(row[2] || '').trim();
+    if (!requestedBy) continue;
+
+    const rawFrom = row[6] ? String(row[6]).trim() : '';
+    const rawTo = row[7] ? String(row[7]).trim() : '';
+
+    leaves.push({
+      id: String(row[1] || `LV-${i}`),
+      timestamp: getIndianDateTimeString(row[0] || new Date()),
+      lrNumber: String(row[1] || ''),
+      requestedBy,
+      department: String(row[3] || ''),
+      totalLeaveDays: Number(row[4]) || 0,
+      jobLocation: String(row[5] || ''),
+      dateFrom: rawFrom ? getIndianDateString(rawFrom) : '',
+      dateTo: rawTo ? getIndianDateString(rawTo) : (rawFrom ? getIndianDateString(rawFrom) : ''),
+      reason: String(row[8] || ''),
+      remark: String(row[9] || ''),
+      imageUrl: String(row[10] || ''),
+    });
+  }
+
+  return leaves;
 }
 

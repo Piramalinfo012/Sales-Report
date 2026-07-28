@@ -37,6 +37,14 @@ html.light .bg-slate-900\/80 {
   border-color: #e2e8f0 !important;
 }
 
+/* Nested / translucent panels & empty states */
+html.light .bg-slate-900\/50,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/70 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
 /* Borders */
 html.light .border-slate-800,
 html.light .border-slate-800\/80,
@@ -196,6 +204,14 @@ html.light .bg-gradient-to-r.from-emerald-950\/60 {
   background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%) !important;
   border-color: #cbd5e1 !important;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* All module hero banners use a `…via-slate-900` gradient — render them as a
+   clean, professional light surface (icons & accent colors stay vibrant). */
+html.light .bg-gradient-to-r.via-slate-900 {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 25px -8px rgba(15, 23, 42, 0.08) !important;
 }
 
 /* Inputs, Selects, Textareas */

@@ -22,28 +22,69 @@ import { BarChart3, PieChart as PieIcon, TrendingUp, Activity, Shield } from 'lu
 export const AnalyticsModule: React.FC = () => {
   const { morningPlans, eveningReports } = useAuth();
 
-  // Prepare chart data sets
-  const cityData = [
-    { city: 'Mumbai', target: 700000, actual: 420000 },
-    { city: 'Pune', target: 250000, actual: 180000 },
-    { city: 'Delhi', target: 500000, actual: 350000 },
-    { city: 'Bengaluru', target: 400000, actual: 310000 },
-  ];
+  // --- Chart data derived from real records (no demo/sample values) ---
 
-  const priorityDistribution = [
-    { name: 'High Priority', value: 60, color: '#f43f5e' },
-    { name: 'Medium Priority', value: 25, color: '#f59e0b' },
-    { name: 'Low Priority', value: 15, color: '#38bdf8' },
-  ];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  const monthlyTrend = [
-    { month: 'Jan', visits: 45, orders: 1200000 },
-    { month: 'Feb', visits: 52, orders: 1450000 },
-    { month: 'Mar', visits: 60, orders: 1800000 },
-    { month: 'Apr', visits: 58, orders: 1650000 },
-    { month: 'May', visits: 65, orders: 2100000 },
-    { month: 'Jun', visits: 72, orders: 2400000 },
-  ];
+  // Parse a stored DD-MM-YYYY (or YYYY-MM-DD) date string into a 0-based month index
+  const getMonthIndex = (dateStr?: string): number | null => {
+    if (!dateStr) return null;
+    const parts = String(dateStr).split(/[-/]/).map(p => p.trim());
+    if (parts.length < 2) return null;
+    // Month sits at index 1 for both DD-MM-YYYY and YYYY-MM-DD
+    const m = Number(parts[1]);
+    if (!m || m < 1 || m > 12) return null;
+    return m - 1;
+  };
+
+  // 1. City-wise: planned business (target) vs reported order value (actual)
+  const cityMap = new Map<string, { city: string; target: number; actual: number }>();
+  morningPlans.forEach(p => {
+    const city = (p.city || '').trim() || 'Other';
+    const entry = cityMap.get(city) || { city, target: 0, actual: 0 };
+    entry.target += Number(p.expectedBusiness) || 0;
+    cityMap.set(city, entry);
+  });
+  eveningReports.forEach(r => {
+    const plan = morningPlans.find(p => p.id === r.morningPlanId);
+    const city = ((plan?.city) || '').trim() || 'Other';
+    const entry = cityMap.get(city) || { city, target: 0, actual: 0 };
+    entry.actual += Number(r.expectedOrder) || 0;
+    cityMap.set(city, entry);
+  });
+  const cityData = Array.from(cityMap.values());
+
+  // 2. Priority breakup of planned meetings
+  const priorityMeta: Record<string, string> = { High: '#f43f5e', Medium: '#f59e0b', Low: '#38bdf8' };
+  const priorityCounts: Record<string, number> = { High: 0, Medium: 0, Low: 0 };
+  morningPlans.forEach(p => {
+    const key = p.priority && priorityCounts[p.priority] !== undefined ? p.priority : 'Medium';
+    priorityCounts[key] += 1;
+  });
+  const priorityDistribution = Object.keys(priorityMeta)
+    .filter(name => priorityCounts[name] > 0)
+    .map(name => ({ name: `${name} Priority`, value: priorityCounts[name], color: priorityMeta[name] }));
+
+  // 3 & 4. Monthly trend: visit counts (plans) and order value (reports)
+  const monthMap = new Map<number, { month: string; visits: number; orders: number }>();
+  morningPlans.forEach(p => {
+    const idx = getMonthIndex(p.meetingDate);
+    if (idx === null) return;
+    const entry = monthMap.get(idx) || { month: MONTHS[idx], visits: 0, orders: 0 };
+    entry.visits += 1;
+    monthMap.set(idx, entry);
+  });
+  eveningReports.forEach(r => {
+    const plan = morningPlans.find(p => p.id === r.morningPlanId);
+    const idx = getMonthIndex(plan?.meetingDate);
+    if (idx === null) return;
+    const entry = monthMap.get(idx) || { month: MONTHS[idx], visits: 0, orders: 0 };
+    entry.orders += Number(r.expectedOrder) || 0;
+    monthMap.set(idx, entry);
+  });
+  const monthlyTrend = Array.from(monthMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([, v]) => v);
 
   return (
     <div className="space-y-6">

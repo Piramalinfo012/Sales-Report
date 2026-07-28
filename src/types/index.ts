@@ -145,6 +145,21 @@ export interface ReferenceRecord {
   createdAt?: string;
 }
 
+export interface LeaveRecord {
+  id: string;
+  timestamp: string;
+  lrNumber: string;
+  requestedBy: string;
+  department: string;
+  totalLeaveDays: number;
+  jobLocation: string;
+  dateFrom: string;
+  dateTo: string;
+  reason: string;
+  remark: string;
+  imageUrl: string;
+}
+
 export interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';

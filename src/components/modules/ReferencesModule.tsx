@@ -183,9 +183,11 @@ export const ReferencesModule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Module Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+      <div className="relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm">
+        <div className="pointer-events-none absolute -top-20 -right-10 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
+
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-sky-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-500/30">
             <UserPlus className="w-6 h-6" />
           </div>
           <div>
@@ -196,45 +198,51 @@ export const ReferencesModule: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="relative flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-800 transition-all cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Sync Records</span>
           </button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleOpenModal}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs transition-all shadow-lg shadow-sky-500/20 cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-sky-500/25 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Reference</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total References</p>
-          <p className="text-2xl font-bold text-white">{references.length}</p>
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-slate-400 to-slate-600" />
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-2">Total References</p>
+          <p className="text-2xl font-black text-white pl-2 tabular-nums">{references.length}</p>
         </div>
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Filtered Count</p>
-          <p className="text-2xl font-bold text-sky-400">{filteredReferences.length}</p>
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-sky-400 to-blue-500" />
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-2">Filtered Count</p>
+          <p className="text-2xl font-black text-sky-400 pl-2 tabular-nums">{filteredReferences.length}</p>
         </div>
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sales Execs</p>
-          <p className="text-2xl font-bold text-indigo-400">
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-indigo-400 to-purple-500" />
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-2">Sales Execs</p>
+          <p className="text-2xl font-black text-indigo-400 pl-2 tabular-nums">
             {new Set(references.map(r => r.allottedToSalesPersonName).filter(Boolean)).size}
           </p>
         </div>
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Target Companies</p>
-          <p className="text-2xl font-bold text-emerald-400">
+        <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
+          <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-emerald-400 to-teal-500" />
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-2">Target Companies</p>
+          <p className="text-2xl font-black text-emerald-400 pl-2 tabular-nums">
             {new Set(references.map(r => r.companyName).filter(Boolean)).size}
           </p>
         </div>
@@ -308,8 +316,27 @@ export const ReferencesModule: React.FC = () => {
             <tbody className="divide-y divide-slate-800/60">
               {filteredReferences.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-500 font-medium">
-                    No reference records found matching your filters.
+                  <td colSpan={9} className="p-0">
+                    <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
+                        <UserPlus className="w-8 h-8" />
+                      </div>
+                      <p className="text-base font-bold text-white">No Reference Records Found</p>
+                      <p className="text-xs text-slate-400 mt-1.5 max-w-sm">
+                        {references.length === 0
+                          ? 'No references have been added yet. Click \'Add Reference\' above to create the first one.'
+                          : 'Nothing matches your current search or filter. Try adjusting them.'}
+                      </p>
+                      {references.length === 0 && (
+                        <button
+                          onClick={handleOpenModal}
+                          className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/20 transition-all cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add Reference</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -410,7 +437,7 @@ export const ReferencesModule: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-lg text-white">Add New Reference Record</h3>
                     <p className="text-xs text-slate-400">
-                      Fill in all 11 reference fields to register in system database
+                      Fill in the reference details to register it in the system
                     </p>
                   </div>
                 </div>
@@ -427,7 +454,7 @@ export const ReferencesModule: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      1) Ref Given By
+                      Ref Given By
                     </label>
                     <input
                       type="text"
@@ -439,7 +466,7 @@ export const ReferencesModule: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      2) Ref Given Company Name
+                      Ref Given Company Name
                     </label>
                     <input
                       type="text"
@@ -455,7 +482,7 @@ export const ReferencesModule: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      3) Allotted To Sales Person Name *
+                      Allotted To Sales Person Name *
                     </label>
                     <select
                       value={allottedToSalesPersonName}
@@ -471,7 +498,7 @@ export const ReferencesModule: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      4) Allotted By Whom
+                      Allotted By Whom
                     </label>
                     <input
                       type="text"
@@ -487,7 +514,7 @@ export const ReferencesModule: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      5) Company Name *
+                      Company Name *
                     </label>
                     <input
                       type="text"
@@ -500,7 +527,7 @@ export const ReferencesModule: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      6) Client Name *
+                      Client Name *
                     </label>
                     <input
                       type="text"
@@ -517,7 +544,7 @@ export const ReferencesModule: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      7) Designation
+                      Designation
                     </label>
                     <input
                       type="text"
@@ -529,7 +556,7 @@ export const ReferencesModule: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">
-                      8) Client Number
+                      Client Number
                     </label>
                     <input
                       type="tel"
@@ -544,7 +571,7 @@ export const ReferencesModule: React.FC = () => {
                 {/* Row 5: Address */}
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    9) Address
+                    Address
                   </label>
                   <input
                     type="text"
@@ -558,7 +585,7 @@ export const ReferencesModule: React.FC = () => {
                 {/* Row 6: Remarks */}
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    10) Remarks
+                    Remarks
                   </label>
                   <textarea
                     rows={2}
@@ -572,7 +599,7 @@ export const ReferencesModule: React.FC = () => {
                 {/* Row 7: Next Followup Date */}
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    11) Next Followup Date
+                    Next Followup Date
                   </label>
                   <input
                     type="date"
@@ -591,10 +618,12 @@ export const ReferencesModule: React.FC = () => {
                   >
                     Cancel
                   </button>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer disabled:opacity-60"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 cursor-pointer disabled:opacity-60"
                   >
                     {isSubmitting ? (
                       <>
@@ -607,7 +636,7 @@ export const ReferencesModule: React.FC = () => {
                         <span>Save Reference</span>
                       </>
                     )}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
             </motion.div>

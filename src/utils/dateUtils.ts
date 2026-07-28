@@ -101,6 +101,29 @@ export function convertInputDateToDDMMYYYY(isoDate: string): string {
 }
 
 /**
+ * Parses a DD-MM-YYYY string into a Date (midnight local time). Returns null if invalid/empty.
+ */
+export function parseDDMMYYYYToDate(ddmmyyyy: string): Date | null {
+  if (!ddmmyyyy) return null;
+  const match = ddmmyyyy.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+  return isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Checks whether `dateStr` (DD-MM-YYYY) falls within [fromStr, toStr] inclusive (both DD-MM-YYYY).
+ * Returns false if dateStr or fromStr is missing/unparseable.
+ */
+export function isDateWithinRange(dateStr: string, fromStr: string, toStr: string): boolean {
+  const date = parseDDMMYYYYToDate(dateStr);
+  const from = parseDDMMYYYYToDate(fromStr);
+  if (!date || !from) return false;
+  const to = parseDDMMYYYYToDate(toStr) || from;
+  return date >= from && date <= to;
+}
+
+/**
  * Helper to convert DD-MM-YYYY to YYYY-MM-DD for HTML <input type="date">
  */
 export function convertDDMMYYYYToInputDate(ddmmyyyy: string): string {

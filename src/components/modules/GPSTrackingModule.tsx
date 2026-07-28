@@ -18,10 +18,23 @@ import {
   X,
   Search,
   Filter,
-  FileText
+  FileText,
+  Calendar,
+  Smartphone,
+  XCircle,
+  ChevronDown,
+  Route
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
+
+// Convert 24-hour time to 12-hour format with AM/PM (e.g. 20:06 -> 08:06 PM)
+const to12Hour = (h: number, m: number): string => {
+  const period = h >= 12 ? 'PM' : 'AM';
+  let hr = h % 12;
+  if (hr === 0) hr = 12;
+  return `${String(hr).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+};
 
 const formatExcelDate = (val: any): string => {
   if (!val) return '-';
@@ -32,16 +45,49 @@ const formatExcelDate = (val: any): string => {
       const day = String(jsDate.getDate()).padStart(2, '0');
       const month = String(jsDate.getMonth() + 1).padStart(2, '0');
       const year = jsDate.getFullYear();
-      const hours = String(jsDate.getHours()).padStart(2, '0');
-      const mins = String(jsDate.getMinutes()).padStart(2, '0');
-      return `${day}-${month}-${year} ${hours}:${mins}`;
+      return `${day}-${month}-${year} ${to12Hour(jsDate.getHours(), jsDate.getMinutes())}`;
     }
   }
-  return String(val);
+
+  // String case (e.g. "27-07-2026 20:06"): convert any 24-hour time to 12-hour AM/PM.
+  const str = String(val).trim();
+  const timeMatch = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if (timeMatch && !/\b(am|pm)\b/i.test(str)) {
+    const h = Number(timeMatch[1]);
+    const m = Number(timeMatch[2]);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      const datePart = str.slice(0, timeMatch.index).trim();
+      const converted = to12Hour(h, m);
+      return datePart ? `${datePart} ${converted}` : converted;
+    }
+  }
+
+  return str;
+};
+
+// Parse an Excel serial number or a "DD-MM-YYYY[ HH:mm]" string into a Date
+// (callers that only need the date truncate the time portion themselves)
+const parseResultDateToDate = (val: any): Date | null => {
+  if (!val) return null;
+  const num = Number(val);
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const jsDate = new Date(Math.round((num - 25569) * 86400 * 1000));
+    return isNaN(jsDate.getTime()) ? null : jsDate;
+  }
+
+  const str = String(val).trim();
+  const m = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) {
+    const jsDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4] || 0), Number(m[5] || 0));
+    return isNaN(jsDate.getTime()) ? null : jsDate;
+  }
+
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? null : parsed;
 };
 
 export const GPSTrackingModule: React.FC = () => {
-  const { authState, gpsRecords, captureGPSLocation, gpsExcelRecords, addGPSExcelRecords, refreshGPSData, showToast } = useAuth();
+  const { authState, gpsRecords, captureGPSLocation, gpsExcelRecords, addGPSExcelRecords, clearGPSExcelRecords, refreshGPSData, showToast, themeMode } = useAuth();
   const user = authState.user;
   const isAdmin = user?.role === 'Admin';
 
@@ -50,6 +96,9 @@ export const GPSTrackingModule: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [mobileFilter, setMobileFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Auto Refresh GPS Sheet Data on Mount
   useEffect(() => {
@@ -64,6 +113,13 @@ export const GPSTrackingModule: React.FC = () => {
       showToast('success', 'GPS Refreshed', 'Latest GPS records loaded successfully.');
     } else {
       showToast('info', 'GPS Data Updated', 'GPS records refreshed.');
+    }
+  };
+
+  const handleClearData = () => {
+    if (window.confirm('Are you sure you want to clear all uploaded Excel GPS records? This action cannot be undone.')) {
+      clearGPSExcelRecords();
+      showToast('success', 'Data Cleared', 'All Excel uploaded GPS records have been removed from local storage.');
     }
   };
 
@@ -283,6 +339,15 @@ export const GPSTrackingModule: React.FC = () => {
   // Get list of sales persons for filter
   const salesPersons = Array.from(new Set(gpsRecords.map(r => r.salesPersonName)));
 
+  // Unique mobile/device numbers found in Excel GPS records, for the dropdown filter
+  const mobileNumberOptions = Array.from(
+    new Set(
+      gpsExcelRecords
+        .map(r => (r.deviceNumber || '').trim())
+        .filter(Boolean)
+    )
+  ).sort();
+
   // Filtered Live Records
   const filteredLiveRecords = gpsRecords.filter(r => {
     if (selectedSalesPerson === 'All') return true;
@@ -292,8 +357,7 @@ export const GPSTrackingModule: React.FC = () => {
   // Filtered Excel Records
   const filteredExcelRecords = gpsExcelRecords.filter(r => {
     const q = searchTerm.toLowerCase().trim();
-    if (!q) return true;
-    return (
+    const matchesSearch = !q || (
       (r.transporterName || '').toLowerCase().includes(q) ||
       (r.recipientCustomerName || '').toLowerCase().includes(q) ||
       (r.vehicleNumber || '').toLowerCase().includes(q) ||
@@ -302,7 +366,78 @@ export const GPSTrackingModule: React.FC = () => {
       (r.address || '').toLowerCase().includes(q) ||
       (r.status || '').toLowerCase().includes(q)
     );
+
+    const mobileQuery = mobileFilter.trim();
+    const matchesMobile = !mobileQuery || (
+      (r.deviceNumber || '').includes(mobileQuery) ||
+      (r.resourceName || '').includes(mobileQuery)
+    );
+
+    let matchesDateRange = true;
+    if (dateFrom || dateTo) {
+      const recDate = parseResultDateToDate(r.resultDate);
+      if (!recDate) {
+        matchesDateRange = false;
+      } else {
+        const recDateOnly = new Date(recDate.getFullYear(), recDate.getMonth(), recDate.getDate()).getTime();
+        
+        if (dateFrom) {
+          const [y, m, d] = dateFrom.split('-');
+          const fromDate = new Date(Number(y), Number(m) - 1, Number(d)).getTime();
+          if (recDateOnly < fromDate) matchesDateRange = false;
+        }
+        
+        if (dateTo) {
+          const [y, m, d] = dateTo.split('-');
+          const toDate = new Date(Number(y), Number(m) - 1, Number(d)).getTime();
+          if (recDateOnly > toDate) matchesDateRange = false;
+        }
+      }
+    }
+
+    return matchesSearch && matchesMobile && matchesDateRange;
   });
+
+  const hasActiveGpsFilters = searchTerm.trim() !== '' || mobileFilter.trim() !== '' || dateFrom !== '' || dateTo !== '';
+  const clearGpsFilters = () => {
+    setSearchTerm('');
+    setMobileFilter('');
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  // Chronological movement path for the selected mobile number (drives the "View Route on Map" card)
+  const MAX_ROUTE_STOPS = 23; // Google Maps directions URL supports up to ~25 waypoints
+  const routeRecords = mobileFilter
+    ? [...filteredExcelRecords]
+        .filter(r => {
+          const lat = Number(r.latitude);
+          const lng = Number(r.longitude);
+          return r.latitude && r.longitude && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+        })
+        .sort((a, b) => {
+          const da = parseResultDateToDate(a.resultDate)?.getTime() ?? 0;
+          const db = parseResultDateToDate(b.resultDate)?.getTime() ?? 0;
+          return da - db;
+        })
+        .filter((r, i, arr) => {
+          if (i === 0) return true;
+          const prev = arr[i - 1];
+          // Filter out consecutive pings that are practically in the same location (jitter < 0.0002 deg, approx 20m)
+          const latDiff = Math.abs(Number(r.latitude) - Number(prev.latitude));
+          const lngDiff = Math.abs(Number(r.longitude) - Number(prev.longitude));
+          return latDiff > 0.0002 || lngDiff > 0.0002;
+        })
+        .slice(0, MAX_ROUTE_STOPS)
+    : [];
+
+  const routeMapsUrl = routeRecords.length > 0
+    ? `https://www.google.com/maps/dir/${routeRecords.map(r => `${r.latitude},${r.longitude}`).join('/')}`
+    : '';
+
+  const routeInteractiveMapsUrl = routeRecords.length > 0
+    ? `/map.html?route=${routeRecords.map(r => `${r.latitude},${r.longitude}`).join('|')}`
+    : '';
 
   return (
     <div className="space-y-6">
@@ -358,6 +493,17 @@ export const GPSTrackingModule: React.FC = () => {
             <span>Upload GPS Excel File</span>
           </button>
 
+          {gpsExcelRecords.length > 0 && (
+            <button
+              onClick={handleClearData}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs transition-all cursor-pointer shadow-md"
+              title="Clear all Excel uploaded GPS records"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Clear Excel Data</span>
+            </button>
+          )}
+
           <button
             onClick={handleManualPing}
             disabled={isCapturing}
@@ -392,8 +538,8 @@ export const GPSTrackingModule: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
-            <MapPin className="w-4 h-4 text-sky-400" />
-            <span>Live Check-in Logs ({gpsRecords.length})</span>
+            <Route className="w-4 h-4 text-sky-400" />
+            <span>Road Map</span>
           </button>
         </div>
       </div>
@@ -401,17 +547,136 @@ export const GPSTrackingModule: React.FC = () => {
       {/* TAB 1: Excel Uploaded GPS Data View */}
       {activeTab === 'excel' && (
         <div className="space-y-4">
-          {/* Search bar */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search Transporter, Customer, Vehicle Number, Address, Device, Status..."
-              className="w-full bg-transparent text-xs text-slate-200 focus:outline-none placeholder:text-slate-500"
-            />
+          {/* Unified Search & Filters Panel */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Filter className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Filters</span>
+                {hasActiveGpsFilters && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                    Active
+                  </span>
+                )}
+              </div>
+
+              {/* Compact Search Bar */}
+              <div className="relative flex-1 lg:max-w-sm">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search records..."
+                  className="w-full pl-8 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+
+              {hasActiveGpsFilters && (
+                <button
+                  onClick={clearGpsFilters}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer lg:ml-auto shrink-0"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Clear All</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Mobile Number Dropdown */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Mobile Number
+                </label>
+                <div className="relative">
+                  <Smartphone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <select
+                    value={mobileFilter}
+                    onChange={(e) => setMobileFilter(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500 appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="">All Mobile Numbers</option>
+                    {mobileNumberOptions.map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* From Date */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  From Date
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    style={{ colorScheme: themeMode === 'dark' ? 'dark' : 'light' }}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* To Date */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  To Date
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    style={{ colorScheme: themeMode === 'dark' ? 'dark' : 'light' }}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Movement Route Card — appears when a Mobile Number is selected */}
+          {mobileFilter && routeRecords.length > 0 && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-emerald-950/40 border border-sky-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                  <Route className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-white">Movement Route — {mobileFilter}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5 truncate">
+                    {routeRecords.length} location ping{routeRecords.length > 1 ? 's' : ''}
+                    {routeRecords.length > 1 && (
+                      <>
+                        {' · From '}
+                        <span className="text-emerald-400 font-medium">{routeRecords[0].address || 'Start Point'}</span>
+                        {' to '}
+                        <span className="text-sky-400 font-medium">{routeRecords[routeRecords.length - 1].address || 'End Point'}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={routeMapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-600 hover:from-sky-400 hover:to-emerald-500 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/20 transition-all shrink-0 cursor-pointer"
+              >
+                <MapPin className="w-4 h-4" />
+                <span>View Route on Map</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
 
           {filteredExcelRecords.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
@@ -505,84 +770,123 @@ export const GPSTrackingModule: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: Live Check-in Logs */}
+      {/* TAB 2: Road Map */}
       {activeTab === 'live' && (
         <div className="space-y-4">
-          {/* Admin Sales Person Filter */}
-          {isAdmin && salesPersons.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-3">
-              <Shield className="w-4 h-4 text-sky-400" />
-              <span className="text-xs text-slate-300 font-semibold">Filter Executive:</span>
-              <select
-                value={selectedSalesPerson}
-                onChange={(e) => setSelectedSalesPerson(e.target.value)}
-                className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white"
-              >
-                <option value="All">All Sales Representatives</option>
-                {salesPersons.map(sp => (
-                  <option key={sp} value={sp}>{sp}</option>
-                ))}
-              </select>
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <h2 className="text-sm font-bold text-white mb-2">Select Number & Date for Road Map</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Mobile / Device Number
+                </label>
+                <div className="relative">
+                  <Smartphone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <select
+                    value={mobileFilter}
+                    onChange={(e) => setMobileFilter(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500 appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="">Select Mobile Number...</option>
+                    {mobileNumberOptions.map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Date
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => { setDateFrom(e.target.value); setDateTo(e.target.value); }}
+                    style={{ colorScheme: themeMode === 'dark' ? 'dark' : 'light' }}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
-          <div className="space-y-4">
-            {filteredLiveRecords.map((rec) => {
-              const mapsUrl = `https://maps.google.com/?q=${rec.latitude},${rec.longitude}`;
-
-              return (
-                <motion.div
-                  key={rec.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-5 rounded-2xl bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+          {/* Render Route if available */}
+          {mobileFilter && dateFrom && routeRecords.length > 0 ? (
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-emerald-950/40 border border-sky-800/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Road Map Details</h3>
+                  <p className="text-xs text-slate-400">Showing {routeRecords.length} location points</p>
+                </div>
+                <a
+                  href={routeInteractiveMapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-600 hover:from-sky-400 hover:to-emerald-500 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/20 transition-all cursor-pointer"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-emerald-400 shrink-0">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm text-white">{rec.salesPersonName}</h3>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                          ID: {rec.salesPersonId}
-                        </span>
-                        {rec.actionSource && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-medium">
-                            {rec.actionSource}
-                          </span>
+                  <Route className="w-4 h-4" />
+                  <span>View Interactive Road Map (with Arrows)</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-slate-800">
+                <div className="relative border-l-2 border-slate-700/50 ml-3 pl-6 space-y-8 py-2">
+                  {routeRecords.map((r, i) => {
+                    const isLast = i === routeRecords.length - 1;
+                    const nextRoute = !isLast ? routeRecords[i+1] : null;
+                    const segmentUrl = nextRoute ? `https://www.google.com/maps/dir/${r.latitude},${r.longitude}/${nextRoute.latitude},${nextRoute.longitude}` : '';
+                    
+                    return (
+                      <div key={r.id || i} className="relative">
+                        <div className="absolute -left-[35px] top-0 w-6 h-6 rounded-full bg-slate-900 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center text-[10px] font-bold">
+                          {i + 1}
+                        </div>
+                        <p className="text-xs font-bold text-emerald-400">
+                          {i === 0 ? 'START: ' : isLast ? 'END: ' : `LOCATION ${i + 1}: `}
+                          <span className="text-white">{formatExcelDate(r.resultDate)}</span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">{r.address}</p>
+                        
+                        {!isLast && (
+                          <div className="mt-5 mb-1 relative">
+                            <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-0.5 text-emerald-500/50">
+                              <ChevronDown className="w-4 h-4" />
+                            </div>
+                            <a
+                              href={segmentUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 text-sky-400 hover:text-sky-300 text-[10px] font-semibold transition-colors"
+                            >
+                              <span>View Route: {i + 1} ➔ {i + 2}</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
                         )}
                       </div>
-
-                      <p className="text-xs text-slate-300 mt-1 font-mono">
-                        Lat: <span className="text-emerald-400">{rec.latitude}</span>, Long: <span className="text-sky-400">{rec.longitude}</span>
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5">{rec.address}</p>
-
-                      <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-2">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {getIndianDateString(rec.date)} at {rec.time}
-                        </span>
-                        <span>Accuracy: ±{rec.accuracy}m</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-sky-400 hover:text-sky-300 text-xs font-semibold transition-all shrink-0"
-                  >
-                    <span>View Location Map</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </motion.div>
-              );
-            })}
-          </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (mobileFilter || dateFrom) ? (
+            <div className="p-8 text-center rounded-2xl bg-slate-900 border border-slate-800">
+               <Route className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+               <p className="text-sm font-semibold text-slate-300">No route data available</p>
+               <p className="text-xs text-slate-500 mt-1">Try selecting a different number or date to view the road map.</p>
+            </div>
+          ) : (
+            <div className="p-8 text-center rounded-2xl bg-slate-900 border border-slate-800">
+               <Route className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+               <p className="text-sm font-semibold text-slate-300">Select a Mobile Number and Date</p>
+               <p className="text-xs text-slate-500 mt-1">Use the filters above to generate a road map for a specific device.</p>
+            </div>
+          )}
         </div>
       )}
 

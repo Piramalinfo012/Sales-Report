@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interactive Route Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; }
+        .number-icon {
+            background-color: #10b981;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet PolylineDecorator for Arrows -->
+    <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+
+    <script>
+        // Parse URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const routeParam = urlParams.get('route');
+        
+        if (!routeParam) {
+            document.body.innerHTML = '<h2 style="padding: 20px;">No route data provided.</h2>';
+        } else {
+            // "lat,lng|lat,lng|..."
+            const pointsStr = routeParam.split('|');
+            const latlngs = pointsStr.map(pt => {
+                const parts = pt.split(',');
+                return [parseFloat(parts[0]), parseFloat(parts[1])];
+            });
+
+            // Initialize map
+            const map = L.map('map').fitBounds(latlngs);
+
+            // Add Google Maps Hybrid tiles (Satellite + Roads/Labels)
+            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                attribution: '© Google',
+                maxZoom: 22
+            }).addTo(map);
+
+            // Draw Polyline
+            const polyline = L.polyline(latlngs, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+
+            // Add Arrows
+            const decorator = L.polylineDecorator(polyline, {
+                patterns: [
+                    {
+                        offset: '10%',
+                        repeat: '50px', // add an arrow every 50 pixels
+                        symbol: L.Symbol.arrowHead({
+                            pixelSize: 15,
+                            polygon: false,
+                            pathOptions: {stroke: true, color: '#1e3a8a', weight: 3, opacity: 1}
+                        })
+                    }
+                ]
+            }).addTo(map);
+
+            // Add Numbered Markers
+            latlngs.forEach((latlng, i) => {
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="number-icon">${i + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+                const popupStr = `<b>Location ${i + 1}</b>`;
+                L.marker(latlng, {icon: icon}).bindPopup(popupStr).addTo(map);
+            });
+            
+            // Adjust bounds to fit all markers
+            map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+        }
+    </script>
+</body>
+</html>

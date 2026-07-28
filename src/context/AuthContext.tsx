@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer, ReferenceRecord } from '../types';
-import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet } from '../services/api';
-import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
+import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer, ReferenceRecord, LeaveRecord } from '../types';
+import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet, fetchLeavesFromSheet } from '../services/api';
 
 interface AuthContextType {
   authState: AuthState;
@@ -22,6 +21,7 @@ interface AuthContextType {
   addGPSRecord: (record: GPSRecord) => void;
   gpsExcelRecords: GPSExcelRecord[];
   addGPSExcelRecords: (recs: GPSExcelRecord[]) => void;
+  clearGPSExcelRecords: () => void;
   refreshGPSData: () => Promise<boolean>;
   captureGPSLocation: (actionSource?: string) => Promise<GPSRecord | null>;
   attendanceRecords: AttendanceRecord[];
@@ -31,6 +31,8 @@ interface AuthContextType {
   references: ReferenceRecord[];
   addReference: (ref: ReferenceRecord) => void;
   refreshReferences: () => Promise<void>;
+  leaveRecords: LeaveRecord[];
+  refreshLeaves: () => Promise<void>;
 }
 
 const LOCAL_STORAGE_USER_KEY = 'sales_reporting_user';
@@ -38,177 +40,30 @@ const LOCAL_STORAGE_REMEMBER_KEY = 'sales_reporting_remember_id';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const todayDDMMYYYY = getIndianDateString();
-const nowISTDateTime = getIndianDateTimeString();
+// Known demo/sample record IDs. These are purged from any previously cached
+// localStorage so the system shows ONLY real data from the connected source.
+const DEMO_RECORD_IDS = new Set<string>([
+  'MP-101', 'MP-102',
+  'ER-201',
+  'GPS-01', 'GPS-02',
+  'ATT-101', 'ATT-102',
+  'CUST-001', 'CUST-002',
+  'REF-101', 'REF-102',
+]);
 
-// Initial sample seed data for demo/dashboard views
-const INITIAL_MORNING_PLANS: MorningPlan[] = [
-  {
-    id: 'MP-101',
-    salesPersonId: 'SALES01',
-    salesPersonName: 'Vikram Sharma',
-    meetingDate: todayDDMMYYYY,
-    partyName: 'Reliance Retail Logistics',
-    contactPerson: 'Suresh Menon',
-    mobileNumber: '+91 98201 12345',
-    city: 'Mumbai',
-    purpose: 'Quarterly Contract Renewal & Heavy Machinery Lubricants',
-    expectedBusiness: 450000,
-    priority: 'High',
-    remarks: 'Key client, high priority meeting',
-    status: 'Submitted',
-    createdAt: nowISTDateTime,
-    latitude: 19.0760,
-    longitude: 72.8777,
-    address: 'Bandra Kurla Complex, Mumbai, Maharashtra 400051',
-  },
-  {
-    id: 'MP-102',
-    salesPersonId: 'SALES01',
-    salesPersonName: 'Vikram Sharma',
-    meetingDate: todayDDMMYYYY,
-    partyName: 'Tata Motors Ancillary',
-    contactPerson: 'Ramesh Patil',
-    mobileNumber: '+91 98902 54321',
-    city: 'Pune',
-    purpose: 'New Product Demo - Hydraulic Oils',
-    expectedBusiness: 250000,
-    priority: 'Medium',
-    remarks: 'Demo required with technical engineer',
-    status: 'Pending',
-    createdAt: nowISTDateTime,
-    latitude: 18.5204,
-    longitude: 73.8567,
-    address: 'Chinchwad Industrial Area, Pune, Maharashtra 411019',
-  },
-];
-
-const INITIAL_EVENING_REPORTS: EveningReport[] = [
-  {
-    id: 'ER-201',
-    morningPlanId: 'MP-101',
-    salesPersonId: 'SALES01',
-    salesPersonName: 'Vikram Sharma',
-    partyName: 'Reliance Retail Logistics',
-    visited: 'Yes',
-    meetingTime: '11:30 AM',
-    discussion: 'Presented bulk pricing for Q3. Client requested 5% additional discount for payment within 15 days.',
-    productsDiscussed: 'Industrial Synth-Oil 400, Gear Oils',
-    requirement: 'Quote for 50 drums by Friday',
-    followUpDate: getIndianDateString(new Date(Date.now() + 86400000 * 3)),
-    expectedOrder: 420000,
-    orderProbability: 85,
-    remarks: 'Positive response from VP Procurement',
-    photoUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80',
-    latitude: 19.0760,
-    longitude: 72.8777,
-    address: 'BKC Tower 2, Mumbai',
-    status: 'Completed',
-    submittedAt: nowISTDateTime,
+// Load a persisted array from localStorage, dropping any leftover demo records
+// while preserving real user-entered data.
+function loadStoredRecords<T extends { id?: string }>(key: string): T[] {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item: T) => item && item.id && !DEMO_RECORD_IDS.has(item.id));
+  } catch {
+    return [];
   }
-];
-
-const INITIAL_GPS_RECORDS: GPSRecord[] = [
-  {
-    id: 'GPS-01',
-    salesPersonId: 'SALES01',
-    salesPersonName: 'Vikram Sharma',
-    latitude: 19.0760,
-    longitude: 72.8777,
-    address: 'Bandra Kurla Complex, Mumbai, Maharashtra 400051',
-    date: todayDDMMYYYY,
-    time: '10:15 AM',
-    accuracy: 12,
-    actionSource: 'Morning Plan Check-in',
-  },
-  {
-    id: 'GPS-02',
-    salesPersonId: 'SALES02',
-    salesPersonName: 'Ananya Roy',
-    latitude: 28.6139,
-    longitude: 77.2090,
-    address: 'Connaught Place, New Delhi 110001',
-    date: todayDDMMYYYY,
-    time: '11:00 AM',
-    accuracy: 8,
-    actionSource: 'Attendance Check-in',
-  }
-];
-
-const INITIAL_ATTENDANCE: AttendanceRecord[] = [
-  {
-    id: 'ATT-101',
-    salesPersonId: 'SALES01',
-    salesPersonName: 'Vikram Sharma',
-    date: todayDDMMYYYY,
-    punchInTime: '09:15 AM',
-    punchInLocation: 'Bandra BKC, Mumbai',
-    status: 'Present',
-  },
-  {
-    id: 'ATT-102',
-    salesPersonId: 'SALES02',
-    salesPersonName: 'Ananya Roy',
-    date: todayDDMMYYYY,
-    punchInTime: '09:05 AM',
-    punchInLocation: 'CP, New Delhi',
-    status: 'Present',
-  },
-];
-
-const INITIAL_CUSTOMERS: Customer[] = [
-  {
-    id: 'CUST-001',
-    partyName: 'Reliance Retail Logistics',
-    contactPerson: 'Suresh Menon',
-    mobileNumber: '+91 98201 12345',
-    city: 'Mumbai',
-    crmId: 'CRM-MUM-99',
-    totalOrders: 1250000,
-    lastVisitDate: todayDDMMYYYY,
-  },
-  {
-    id: 'CUST-002',
-    partyName: 'Tata Motors Ancillary',
-    contactPerson: 'Ramesh Patil',
-    mobileNumber: '+91 98902 54321',
-    city: 'Pune',
-    crmId: 'CRM-PUN-44',
-    totalOrders: 850000,
-    lastVisitDate: '2026-07-15',
-  },
-];
-
-const INITIAL_REFERENCES: ReferenceRecord[] = [
-  {
-    id: 'REF-101',
-    refGivenBy: 'Rajesh Sharma',
-    refGivenCompanyName: 'Apex Industries',
-    allottedToSalesPersonName: 'Atul Baghmar',
-    allottedByWhom: 'Rajesh Kumar',
-    companyName: 'Surya Petrochem Pvt Ltd',
-    clientName: 'Sanjay Verma',
-    designation: 'Procurement Head',
-    clientNumber: '+91 98765 43210',
-    address: 'Plot 45, Industrial Zone, Indore, MP',
-    remarks: 'Interested in industrial lubricants bulk order',
-    nextFollowupDate: todayDDMMYYYY,
-  },
-  {
-    id: 'REF-102',
-    refGivenBy: 'Amitabh Gupta',
-    refGivenCompanyName: 'Central Logistics Ltd',
-    allottedToSalesPersonName: 'Vikram Sharma',
-    allottedByWhom: 'ADMIN',
-    companyName: 'Mahavir Engineering Works',
-    clientName: 'Pankaj Jain',
-    designation: 'General Manager',
-    clientNumber: '+91 91234 56789',
-    address: 'Sector 3, Pithampur Industrial Area, MP',
-    remarks: 'Requires quotation for hydraulic oils',
-    nextFollowupDate: todayDDMMYYYY,
-  },
-];
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -239,46 +94,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setThemeMode(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Persistent modules data state
+  // Persistent modules data state (real data only — demo records are purged)
   const [morningPlans, setMorningPlans] = useState<MorningPlan[]>(() => {
-    const saved = localStorage.getItem('sales_morning_plans');
-    const parsed: MorningPlan[] = saved ? JSON.parse(saved) : INITIAL_MORNING_PLANS;
+    const stored = loadStoredRecords<MorningPlan>('sales_morning_plans');
     const map = new Map<string, MorningPlan>();
-    parsed.forEach(item => {
+    stored.forEach(item => {
       if (item && item.id) map.set(item.id, item);
     });
     return Array.from(map.values());
   });
 
-  const [eveningReports, setEveningReports] = useState<EveningReport[]>(() => {
-    const saved = localStorage.getItem('sales_evening_reports');
-    return saved ? JSON.parse(saved) : INITIAL_EVENING_REPORTS;
-  });
+  const [eveningReports, setEveningReports] = useState<EveningReport[]>(() =>
+    loadStoredRecords<EveningReport>('sales_evening_reports')
+  );
 
-  const [gpsRecords, setGpsRecords] = useState<GPSRecord[]>(() => {
-    const saved = localStorage.getItem('sales_gps_records');
-    return saved ? JSON.parse(saved) : INITIAL_GPS_RECORDS;
-  });
+  const [gpsRecords, setGpsRecords] = useState<GPSRecord[]>(() =>
+    loadStoredRecords<GPSRecord>('sales_gps_records')
+  );
 
-  const [gpsExcelRecords, setGpsExcelRecords] = useState<GPSExcelRecord[]>(() => {
-    const saved = localStorage.getItem('sales_gps_excel_records');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [gpsExcelRecords, setGpsExcelRecords] = useState<GPSExcelRecord[]>(() =>
+    loadStoredRecords<GPSExcelRecord>('sales_gps_excel_records')
+  );
 
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
-    const saved = localStorage.getItem('sales_attendance');
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
-  });
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() =>
+    loadStoredRecords<AttendanceRecord>('sales_attendance')
+  );
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('sales_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
+  const [customers, setCustomers] = useState<Customer[]>(() =>
+    loadStoredRecords<Customer>('sales_customers')
+  );
 
-  const [references, setReferences] = useState<ReferenceRecord[]>(() => {
-    const saved = localStorage.getItem('sales_references');
-    return saved ? JSON.parse(saved) : INITIAL_REFERENCES;
-  });
+  const [references, setReferences] = useState<ReferenceRecord[]>(() =>
+    loadStoredRecords<ReferenceRecord>('sales_references')
+  );
+
+  const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>(() =>
+    loadStoredRecords<LeaveRecord>('sales_leaves')
+  );
 
   // Save to LocalStorage on changes
   useEffect(() => {
@@ -308,6 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('sales_references', JSON.stringify(references));
   }, [references]);
+
+  useEffect(() => {
+    localStorage.setItem('sales_leaves', JSON.stringify(leaveRecords));
+  }, [leaveRecords]);
 
   // Read saved user on load
   useEffect(() => {
@@ -433,6 +289,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGpsExcelRecords(prev => [...recs, ...prev]);
   };
 
+  const clearGPSExcelRecords = async () => {
+    setGpsExcelRecords([]);
+    try {
+      const params = new URLSearchParams();
+      params.append('sheetName', 'GPS');
+      params.append('action', 'clear');
+      await fetch('https://script.google.com/macros/s/AKfycbyhXWGagj_RY-JEkrNaKA2aNjiSlAOJDEYau6Hm7tCfQ4t7Y03aGZBhgkPWfJrslFrdZg/exec', {
+        method: 'POST',
+        body: params,
+      });
+    } catch (err) {
+      console.error('Error clearing sheet:', err);
+    }
+  };
+
   const refreshGPSData = async (): Promise<boolean> => {
     try {
       const { liveRecords, excelRecords } = await fetchGPSDataFromSheet();
@@ -490,6 +361,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.warn('Error fetching references from sheet:', err);
+    }
+  };
+
+  const refreshLeaves = async () => {
+    try {
+      const remoteLeaves = await fetchLeavesFromSheet();
+      if (remoteLeaves && remoteLeaves.length > 0) {
+        setLeaveRecords(prev => {
+          const map = new Map<string, LeaveRecord>();
+          remoteLeaves.forEach(r => map.set(r.id, r));
+          prev.forEach(r => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        });
+      }
+    } catch (err) {
+      console.warn('Error fetching leave records from sheet:', err);
     }
   };
 
@@ -556,6 +445,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addGPSRecord,
         gpsExcelRecords,
         addGPSExcelRecords,
+        clearGPSExcelRecords,
         refreshGPSData,
         captureGPSLocation,
         attendanceRecords,
@@ -565,6 +455,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         references,
         addReference,
         refreshReferences,
+        leaveRecords,
+        refreshLeaves,
       }}
     >
       {children}

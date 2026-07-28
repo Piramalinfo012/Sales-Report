@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationTab } from '../dashboard/DashboardContainer';
+import { getIndianDateString, isDateWithinRange } from '../../utils/dateUtils';
 import {
   Bell,
   LogOut,
   User,
   Menu,
   Sparkles,
-  Compass,
   CheckCircle2,
   Clock,
   AlertCircle,
   Sun,
-  Moon
+  Moon,
+  UserX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -23,18 +24,31 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile }) => {
-  const { authState, logout, captureGPSLocation, themeMode, toggleTheme } = useAuth();
+  const { authState, logout, themeMode, toggleTheme, leaveRecords, refreshLeaves } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
 
   const user = authState.user;
 
-  const handleQuickGps = async () => {
-    setIsCapturing(true);
-    await captureGPSLocation('Header Quick Ping');
-    setIsCapturing(false);
-  };
+  const userInitial = (user?.userName || 'U').charAt(0).toUpperCase();
+
+  // Keep leave data fresh so "on leave today" notifications stay accurate
+  useEffect(() => {
+    refreshLeaves();
+  }, []);
+
+  // Sales persons currently on approved leave for today's date
+  const todayStr = getIndianDateString();
+  const leaveNotifications = leaveRecords
+    .filter(l => isDateWithinRange(todayStr, l.dateFrom, l.dateTo))
+    .map(l => ({
+      id: `leave-${l.id}`,
+      title: `${l.requestedBy} is on Leave Today`,
+      desc: l.reason || `${l.department || 'Team'} · ${l.totalLeaveDays || ''} day(s) leave`,
+      time: 'Today',
+      icon: UserX,
+      color: 'text-rose-400 bg-rose-950/40 border-rose-800/40',
+    }));
 
   const sampleNotifications = [
     {
@@ -48,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
     {
       id: 2,
       title: 'Pending Follow-up Alert',
-      desc: 'Reliance Retail contract renewal follow-up due today',
+      desc: 'You have pending client follow-ups due today',
       time: '11:30 AM',
       icon: AlertCircle,
       color: 'text-sky-400 bg-sky-950/40 border-sky-800/40',
@@ -75,22 +89,15 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="hidden sm:flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            System Online & Synced
+        <div className="hidden sm:flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          </span>
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+            System Online &amp; Synced
           </span>
         </div>
-
-        <button
-          onClick={handleQuickGps}
-          disabled={isCapturing}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-xs font-medium text-slate-200 hover:text-sky-400 transition-all shadow-sm"
-          title="Capture Current GPS Coordinates"
-        >
-          <Compass className={`w-3.5 h-3.5 text-sky-400 ${isCapturing ? 'animate-spin' : ''}`} />
-          <span>{isCapturing ? 'Locating...' : 'Ping GPS'}</span>
-        </button>
       </div>
 
       {/* Right Section: Notifications, Theme Switcher & User Profile */}
@@ -142,12 +149,12 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
                     <span>Daily System Reminders</span>
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
-                    3 Active
+                    {leaveNotifications.length + sampleNotifications.length} Active
                   </span>
                 </div>
 
                 <div className="space-y-2.5">
-                  {sampleNotifications.map((n) => {
+                  {[...leaveNotifications, ...sampleNotifications].map((n) => {
                     const Icon = n.icon;
                     return (
                       <div
@@ -182,11 +189,9 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
             }}
             className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-800"
           >
-            <img
-              src={user?.profileUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-              alt={user?.userName}
-              className="w-8 h-8 rounded-xl object-cover ring-2 ring-sky-500/30"
-            />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold ring-2 ring-sky-500/30 shrink-0">
+              {userInitial}
+            </div>
             <div className="hidden md:block text-left leading-none">
               <div className="text-xs font-semibold text-white truncate max-w-[120px]">
                 {user?.userName || 'User'}
@@ -206,11 +211,9 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
                 className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 z-50 text-slate-200"
               >
                 <div className="flex items-center gap-3 pb-3 mb-3 border-b border-slate-800">
-                  <img
-                    src={user?.profileUrl}
-                    alt={user?.userName}
-                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-sky-500/40"
-                  />
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white text-base font-bold ring-2 ring-sky-500/40 shrink-0">
+                    {userInitial}
+                  </div>
                   <div className="overflow-hidden">
                     <h4 className="font-semibold text-sm text-white truncate">{user?.userName}</h4>
                     <p className="text-xs text-slate-400 truncate">ID: {user?.id}</p>
