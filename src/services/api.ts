@@ -529,6 +529,74 @@ export async function saveGPSExcelRowsToSheet(records: GPSExcelRecord[]): Promis
 }
 
 /**
+ * Fetch GPS records from Google Sheet 'GPS' tab
+ */
+export async function fetchGPSDataFromSheet(): Promise<{
+  liveRecords: GPSRecord[];
+  excelRecords: GPSExcelRecord[];
+}> {
+  const liveRecords: GPSRecord[] = [];
+  const excelRecords: GPSExcelRecord[] = [];
+
+  try {
+    const rows = await fetchSheetData('GPS');
+    if (!rows || rows.length <= 1) {
+      return { liveRecords, excelRecords };
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+
+      const col0 = String(row[0] || '').trim();
+      const col1 = String(row[1] || '').trim();
+      const col2 = String(row[2] || '').trim();
+
+      // Live ping check: ID starts with GPS- or contains numeric lat/lng
+      if (col0.startsWith('GPS-') || (row.length >= 7 && !isNaN(Number(row[3])) && !isNaN(Number(row[4])) && Number(row[3]) !== 0)) {
+        liveRecords.push({
+          id: col0 || `GPS-${Date.now()}-${i}`,
+          salesPersonId: col1 || 'USR-01',
+          salesPersonName: col2 || 'Sales User',
+          latitude: Number(row[3]) || 0,
+          longitude: Number(row[4]) || 0,
+          address: String(row[5] || 'Recorded Location'),
+          date: String(row[6] || getIndianDateString()),
+          time: String(row[7] || getIndianTimeString()),
+          accuracy: Number(row[8]) || 10,
+          actionSource: String(row[9] || 'Live Check-in'),
+        });
+      } else {
+        // Treat as 13-column Excel GPS record
+        if (col0 || col1 || col2 || row[6] || row[7]) {
+          excelRecords.push({
+            id: `GPS-EXCEL-${i}`,
+            transporterName: col0,
+            recipientCustomerName: col1,
+            vehicleNumber: col2,
+            resourceName: String(row[3] || ''),
+            deviceNumber: String(row[4] || ''),
+            resultDate: String(row[5] || ''),
+            address: String(row[6] || ''),
+            latitude: String(row[7] || ''),
+            longitude: String(row[8] || ''),
+            accuracy: String(row[9] || ''),
+            distance: String(row[10] || ''),
+            status: String(row[11] || ''),
+            type: String(row[12] || ''),
+            uploadedAt: getIndianDateString(),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error fetching GPS sheet data:', err);
+  }
+
+  return { liveRecords, excelRecords };
+}
+
+/**
  * Fetch targets from Google Sheet 'Target' tab
  */
 export async function fetchTargetsFromSheet(): Promise<TargetRecord[]> {

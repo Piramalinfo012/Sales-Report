@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { GPSExcelRecord } from '../../types';
 import { saveGPSExcelRowsToSheet } from '../../services/api';
@@ -41,14 +41,31 @@ const formatExcelDate = (val: any): string => {
 };
 
 export const GPSTrackingModule: React.FC = () => {
-  const { authState, gpsRecords, captureGPSLocation, gpsExcelRecords, addGPSExcelRecords, showToast } = useAuth();
+  const { authState, gpsRecords, captureGPSLocation, gpsExcelRecords, addGPSExcelRecords, refreshGPSData, showToast } = useAuth();
   const user = authState.user;
   const isAdmin = user?.role === 'Admin';
 
   const [activeTab, setActiveTab] = useState<'excel' | 'live'>('excel');
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto Refresh GPS Sheet Data on Mount
+  useEffect(() => {
+    refreshGPSData();
+  }, []);
+
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    const ok = await refreshGPSData();
+    setIsRefreshing(false);
+    if (ok) {
+      showToast('success', 'GPS Sheet Refreshed', 'Latest GPS records loaded from Google Sheet.');
+    } else {
+      showToast('info', 'GPS Data Updated', 'GPS records refreshed.');
+    }
+  };
 
   // File Upload States
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -315,6 +332,16 @@ export const GPSTrackingModule: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
           <button
+            onClick={handleRefreshData}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-300 font-bold text-xs transition-all disabled:opacity-60 cursor-pointer shadow-md"
+            title="Refresh latest data from Google Sheet GPS tab"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Syncing...' : 'Refresh GPS Sheet'}</span>
+          </button>
+
+          <button
             onClick={handleDownloadSample}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
             title="Download Excel format matching Google Sheet headers"
@@ -336,7 +363,7 @@ export const GPSTrackingModule: React.FC = () => {
             disabled={isCapturing}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs transition-all disabled:opacity-60 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isCapturing ? 'animate-spin' : ''}`} />
+            <MapPin className={`w-3.5 h-3.5 text-emerald-400 ${isCapturing ? 'animate-spin' : ''}`} />
             <span>{isCapturing ? 'Capturing...' : 'Live Check-in'}</span>
           </button>
         </div>

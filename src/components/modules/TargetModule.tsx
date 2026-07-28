@@ -22,6 +22,46 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+export const formatMonthDisplay = (val: any): string => {
+  if (!val) return 'July 2026';
+  const str = String(val).trim();
+  if (!str) return 'July 2026';
+
+  // If already in Month Year format (e.g. "July 2026" or "June 2026")
+  if (/^[A-Za-z]+\s+\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // If ISO date string or YYYY-MM date (e.g. "2026-06-30T18:30:00.000Z")
+  if (str.includes('T') || (str.includes('-') && str.length >= 7)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      // Adjust by IST (+5.5 hrs) for UTC date bounds from Google Sheets
+      const localDate = new Date(d.getTime() + (5.5 * 3600 * 1000));
+      return `${monthNames[localDate.getUTCMonth()]} ${localDate.getUTCFullYear()}`;
+    }
+  }
+
+  // If numeric Excel date serial
+  const num = Number(str);
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const jsDate = new Date(Math.round((num - 25569) * 86400 * 1000));
+    if (!isNaN(jsDate.getTime())) {
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return `${monthNames[jsDate.getMonth()]} ${jsDate.getFullYear()}`;
+    }
+  }
+
+  return str;
+};
+
 export const TargetModule: React.FC = () => {
   const { authState, showToast } = useAuth();
   const user = authState.user;
@@ -116,12 +156,17 @@ export const TargetModule: React.FC = () => {
 
   // Filter targets
   const filteredTargets = targets.filter(t => {
+    const formattedMonth = formatMonthDisplay(t.month);
     const matchesSearch =
       t.salesPersonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.remark.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.month.toLowerCase().includes(searchTerm.toLowerCase());
+      formattedMonth.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.month || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesMonth = selectedMonthFilter === 'All' || t.month === selectedMonthFilter;
+    const matchesMonth =
+      selectedMonthFilter === 'All' ||
+      formattedMonth.toLowerCase() === selectedMonthFilter.toLowerCase() ||
+      (t.month || '').toLowerCase() === selectedMonthFilter.toLowerCase();
 
     return matchesSearch && matchesMonth;
   });
@@ -202,7 +247,7 @@ export const TargetModule: React.FC = () => {
             ₹{(userTarget?.amount || 500000).toLocaleString('en-IN')}
           </div>
           <div className="text-[11px] text-slate-300 truncate">
-            {userTarget?.month || 'July 2026'} • {userTarget?.totalNewOrders || 10} Orders Goal
+            {formatMonthDisplay(userTarget?.month)} • {userTarget?.totalNewOrders || 10} Orders Goal
           </div>
         </div>
       </div>
@@ -389,7 +434,7 @@ export const TargetModule: React.FC = () => {
                   <tr key={t.id || idx} className="hover:bg-slate-800/40 transition-colors">
                     <td className="p-3 font-mono text-sky-400 font-semibold">{t.id}</td>
                     <td className="p-3 text-slate-400 text-[11px]">{getIndianDateTimeString(t.timestamp)}</td>
-                    <td className="p-3 font-semibold text-slate-200">{t.month}</td>
+                    <td className="p-3 font-semibold text-slate-200">{formatMonthDisplay(t.month)}</td>
                     <td className="p-3 font-medium text-white">{t.salesPersonName}</td>
                     <td className="p-3 text-right font-mono text-sky-300 font-bold">
                       {t.totalNewOrders}

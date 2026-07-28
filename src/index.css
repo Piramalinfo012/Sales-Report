@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
-/* Stylish & Colorful Light Theme */
+/* Stylish & Premium Light Theme Overrides */
 html.light {
   color-scheme: light;
 }
 
 html.light body,
 html.light .bg-slate-950 {
-  background-color: #f1f5f9 !important;
-  background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-                    radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+  background-color: #f8fafc !important;
+  background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.07) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.07) 0px, transparent 50%),
                     radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%) !important;
   color: #0f172a !important;
 }
@@ -19,7 +19,7 @@ html.light .bg-slate-900 {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #e2e8f0 !important;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 4px 6px -2px rgba(15, 23, 42, 0.02) !important;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 6px -2px rgba(15, 23, 42, 0.02) !important;
 }
 
 html.light .bg-slate-950\/40,
@@ -47,7 +47,7 @@ html.light .border-slate-700\/60 {
   border-color: #e2e8f0 !important;
 }
 
-/* Text Hierarchy */
+/* High Contrast Legible Text Hierarchy */
 html.light .text-slate-100,
 html.light .text-white {
   color: #0f172a !important;
@@ -59,11 +59,31 @@ html.light .text-slate-300 {
 }
 
 html.light .text-slate-400 {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 html.light .text-slate-500 {
-  color: #94a3b8 !important;
+  color: #64748b !important;
+}
+
+/* Vibrant Contrast Color Accents for Light Mode */
+html.light .text-emerald-400 {
+  color: #059669 !important;
+}
+html.light .text-sky-400 {
+  color: #0284c7 !important;
+}
+html.light .text-indigo-400 {
+  color: #4f46e5 !important;
+}
+html.light .text-amber-400 {
+  color: #d97706 !important;
+}
+html.light .text-rose-400 {
+  color: #e11d48 !important;
+}
+html.light .text-purple-400 {
+  color: #9333ea !important;
 }
 
 /* Secondary Backgrounds & Hover States */
@@ -73,7 +93,8 @@ html.light .bg-slate-800\/80,
 html.light .bg-slate-800\/60,
 html.light .bg-slate-800\/40 {
   background-color: #f1f5f9 !important;
-  color: #1e293b !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
 
 html.light .hover\:bg-slate-800:hover,
@@ -85,50 +106,56 @@ html.light .hover\:bg-slate-800\/40:hover {
 
 /* Vibrant Badges & Status Pills in Light Mode */
 html.light .bg-emerald-950,
+html.light .bg-emerald-950\/80,
 html.light .bg-emerald-950\/60,
 html.light .bg-emerald-950\/40 {
-  background-color: #d1fae5 !important;
-  color: #065f46 !important;
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
   border-color: #a7f3d0 !important;
 }
 
 html.light .bg-sky-950,
+html.light .bg-sky-950\/80,
 html.light .bg-sky-950\/60,
 html.light .bg-sky-950\/40 {
-  background-color: #e0f2fe !important;
-  color: #0176D3 !important;
+  background-color: #f0f9ff !important;
+  color: #0284c7 !important;
   border-color: #bae6fd !important;
 }
 
 html.light .bg-indigo-950,
+html.light .bg-indigo-950\/80,
 html.light .bg-indigo-950\/60,
 html.light .bg-indigo-950\/40 {
-  background-color: #e0e7ff !important;
-  color: #3730a3 !important;
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
   border-color: #c7d2fe !important;
 }
 
 html.light .bg-amber-950,
+html.light .bg-amber-950\/80,
 html.light .bg-amber-950\/60,
 html.light .bg-amber-950\/40 {
-  background-color: #fef3c7 !important;
-  color: #92400e !important;
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
   border-color: #fde68a !important;
 }
 
 html.light .bg-rose-950,
+html.light .bg-rose-950\/80,
 html.light .bg-rose-950\/60,
 html.light .bg-rose-950\/40 {
-  background-color: #ffe4e6 !important;
-  color: #9f1239 !important;
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
   border-color: #fecdd3 !important;
 }
 
 html.light .bg-teal-950,
+html.light .bg-teal-950\/80,
 html.light .bg-teal-950\/60,
 html.light .bg-teal-950\/40 {
-  background-color: #ccfbf1 !important;
-  color: #115e59 !important;
+  background-color: #f0fdfa !important;
+  color: #0f766e !important;
   border-color: #99f6e4 !important;
 }
 
@@ -163,14 +190,12 @@ html.light .bg-rose-500\/10 {
   color: #e11d48 !important;
 }
 
-/* Gradient Card Headers in Light Mode */
-html.light .bg-gradient-to-r.from-slate-900.via-indigo-950\/50.to-slate-900,
-html.light .bg-gradient-to-r.from-slate-900.via-indigo-950\/40.to-slate-900,
-html.light .bg-gradient-to-r.from-slate-900.via-slate-900.to-indigo-950\/40,
-html.light .bg-gradient-to-r.from-teal-950\/40.via-slate-900.to-indigo-950\/40 {
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 40%, #f0f9ff 70%, #eef2ff 100%) !important;
+/* Gradient Card Headers & Banner Overrides in Light Mode */
+html.light .bg-gradient-to-r.from-slate-900,
+html.light .bg-gradient-to-r.from-emerald-950\/60 {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%) !important;
   border-color: #cbd5e1 !important;
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
 }
 
 /* Inputs, Selects, Textareas */
@@ -180,8 +205,8 @@ html.light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 html.light input:focus,
@@ -196,20 +221,25 @@ html.light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Tables */
+/* Premium Light Mode Tables */
 html.light table {
   border-collapse: separate;
   border-spacing: 0;
 }
 
-html.light table thead {
+html.light table thead tr {
   background-color: #f1f5f9 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+html.light table thead th {
   color: #334155 !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
 }
 
 html.light table tbody tr {
-  border-color: #e5e7eb !important;
+  border-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
 }
 
 html.light table tbody tr:hover {

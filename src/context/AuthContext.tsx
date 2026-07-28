@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer } from '../types';
-import { loginWithGoogleSheet, saveGPSToSheet } from '../services/api';
+import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet } from '../services/api';
 import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
 
 interface AuthContextType {
@@ -22,6 +22,7 @@ interface AuthContextType {
   addGPSRecord: (record: GPSRecord) => void;
   gpsExcelRecords: GPSExcelRecord[];
   addGPSExcelRecords: (recs: GPSExcelRecord[]) => void;
+  refreshGPSData: () => Promise<boolean>;
   captureGPSLocation: (actionSource?: string) => Promise<GPSRecord | null>;
   attendanceRecords: AttendanceRecord[];
   addAttendanceRecord: (rec: AttendanceRecord) => void;
@@ -389,6 +390,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGpsExcelRecords(prev => [...recs, ...prev]);
   };
 
+  const refreshGPSData = async (): Promise<boolean> => {
+    try {
+      const { liveRecords, excelRecords } = await fetchGPSDataFromSheet();
+      if (liveRecords.length > 0) {
+        setGpsRecords(prev => {
+          const map = new Map<string, GPSRecord>();
+          liveRecords.forEach(r => map.set(r.id, r));
+          prev.forEach(r => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        });
+      }
+      if (excelRecords.length > 0) {
+        setGpsExcelRecords(prev => {
+          const map = new Map<string, GPSExcelRecord>();
+          excelRecords.forEach(r => map.set(r.id, r));
+          prev.forEach(r => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        });
+      }
+      return true;
+    } catch (err) {
+      console.warn('Error refreshing GPS data:', err);
+      return false;
+    }
+  };
+
   const addAttendanceRecord = (rec: AttendanceRecord) => {
     setAttendanceRecords(prev => [rec, ...prev]);
   };
@@ -460,6 +491,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addGPSRecord,
         gpsExcelRecords,
         addGPSExcelRecords,
+        refreshGPSData,
         captureGPSLocation,
         attendanceRecords,
         addAttendanceRecord,
