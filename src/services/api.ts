@@ -148,6 +148,35 @@ export async function deleteSheetRowByIndex(sheetName: string, rowIndex: number)
 }
 
 /**
+ * Delete a row by matching its ID against a column (default: column A).
+ * Looks up the row's current position with a fresh sheet read (so it's
+ * correct even if the sheet changed since this record was last fetched),
+ * then deletes it by that row number. Returns false if no matching row is found.
+ */
+export async function deleteSheetRowById(sheetName: string, id: string, idColumnIndex: number = 0): Promise<boolean> {
+  try {
+    const rows = await fetchSheetData(sheetName);
+    if (!rows || rows.length <= 1) return false;
+
+    let targetRowNumber = -1;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (row && String(row[idColumnIndex] ?? '').trim() === id.trim()) {
+        targetRowNumber = i + 1; // 1-based sheet row number (row 1 is the header)
+        break;
+      }
+    }
+
+    if (targetRowNumber === -1) return false;
+
+    return await deleteSheetRowByIndex(sheetName, targetRowNumber);
+  } catch (err) {
+    console.warn(`Failed to delete row (id=${id}) from ${sheetName}:`, err);
+    return false;
+  }
+}
+
+/**
  * Fetch sheet data using doGet(e) with ?sheet=SheetName
  */
 export async function fetchSheetData(sheetName: string): Promise<any[][] | null> {
@@ -656,7 +685,6 @@ export async function fetchTargetsFromSheet(): Promise<TargetRecord[]> {
 
     targets.push({
       id: String(row[0] || `TGT-${i}`),
-      rowIndex: i + 1,
       timestamp: getIndianDateTimeString(row[1] || new Date()),
       month: String(row[2] || ''),
       salesPersonName: String(row[3] || 'All Sales Reps'),

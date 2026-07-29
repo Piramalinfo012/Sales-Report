@@ -100,11 +100,14 @@ export const ReferencesModule: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete reference for ${name}?`)) {
-      deleteReference(id);
-      showToast('info', 'Reference Deleted', `Reference for ${name} removed.`);
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete reference for ${name}?`)) return;
+    const success = await deleteReference(id);
+    if (!success) {
+      showToast('error', 'Delete Failed', 'Could not delete the reference from the sheet. Please try again.');
+      return;
     }
+    showToast('info', 'Reference Deleted', `Reference for ${name} removed.`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

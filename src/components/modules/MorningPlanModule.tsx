@@ -203,9 +203,13 @@ export const MorningPlanModule: React.FC = () => {
     }
   };
 
-  const handleDeletePlan = (id: string) => {
+  const handleDeletePlan = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this plan?')) return;
-    deleteMorningPlan(id);
+    const success = await deleteMorningPlan(id);
+    if (!success) {
+      showToast('error', 'Delete Failed', 'Could not delete the plan from the sheet. Please try again.');
+      return;
+    }
     showToast('success', 'Plan Deleted', 'Plan has been removed.');
     if (selectedGroupDetails) {
       setSelectedGroupDetails(prev => {

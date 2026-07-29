@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet, fetchCRMOrdersFromSheet, deleteSheetRowByIndex, updateSheetRow } from '../../services/api';
+import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet, fetchCRMOrdersFromSheet, deleteSheetRowById, updateSheetRow } from '../../services/api';
 import { TargetRecord, CRMOrderRecord } from '../../types';
 import { getIndianDateTimeString } from '../../utils/dateUtils';
 import {
@@ -172,10 +172,6 @@ export const TargetModule: React.FC = () => {
         remark: remark.trim(),
       });
 
-      // New rows are appended to the bottom of the sheet, so the row number
-      // is right after the last currently-loaded row (1 header row + existing rows + 1).
-      newRecord.rowIndex = targets.length + 2;
-
       setTargets(prev => [newRecord, ...prev]);
       showToast('success', 'Target Assigned!', `Target successfully assigned to ${salesPersonName}.`);
 
@@ -215,29 +211,17 @@ export const TargetModule: React.FC = () => {
     }
   };
 
-  const handleDeleteTarget = async (target: TargetRecord) => {
+  const handleDeleteTarget = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this target record?')) return;
-    if (!target.rowIndex) {
-      showToast('error', 'Delete Failed', 'Could not determine the sheet row for this record.');
-      return;
-    }
-
     const previousTargets = targets;
-    setTargets(prev => prev.filter(t => t.id !== target.id));
+    setTargets(prev => prev.filter(t => t.id !== id));
 
-    const success = await deleteSheetRowByIndex('Target', target.rowIndex);
+    const success = await deleteSheetRowById('Target', id);
     if (!success) {
       setTargets(previousTargets);
       showToast('error', 'Delete Failed', 'Could not delete the target record from the sheet. Please try again.');
       return;
     }
-
-    // Rows below the deleted one shift up by one in the sheet, so keep local rowIndex in sync.
-    setTargets(prev => prev.map(t =>
-      t.rowIndex && target.rowIndex && t.rowIndex > target.rowIndex
-        ? { ...t, rowIndex: t.rowIndex - 1 }
-        : t
-    ));
 
     showToast('success', 'Target Deleted', 'The target record has been removed.');
   };
@@ -598,7 +582,7 @@ export const TargetModule: React.FC = () => {
                         <button onClick={() => setEditingTarget(t)} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer" title="Edit">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDeleteTarget(t)} className="p-1.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors cursor-pointer" title="Delete">
+                        <button onClick={() => handleDeleteTarget(t.id)} className="p-1.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors cursor-pointer" title="Delete">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>

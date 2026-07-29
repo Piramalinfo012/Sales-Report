@@ -6,9 +6,10 @@ import {
   fetchGPSDataFromSheet, 
   fetchReferencesFromSheet, 
   fetchLeavesFromSheet, 
-  fetchMorningPlansFromSheet, 
+  fetchMorningPlansFromSheet,
   fetchEveningReportsFromSheet,
   deleteSheetRow,
+  deleteSheetRowById,
   updateSheetRow
 } from '../services/api';
 
@@ -48,13 +49,13 @@ interface AuthContextType {
 
 
   updateMorningPlan: (plan: MorningPlan) => void;
-  deleteMorningPlan: (id: string) => void;
+  deleteMorningPlan: (id: string) => Promise<boolean>;
   updateEveningReport: (report: EveningReport) => void;
-  deleteEveningReport: (id: string) => void;
+  deleteEveningReport: (id: string) => Promise<boolean>;
   updateCustomer: (cust: Customer) => void;
   deleteCustomer: (id: string) => void;
   updateReference: (ref: ReferenceRecord) => void;
-  deleteReference: (id: string) => void;
+  deleteReference: (id: string) => Promise<boolean>;
   updateAttendanceRecord: (rec: AttendanceRecord) => void;
   deleteAttendanceRecord: (id: string) => void;
 }
@@ -337,10 +338,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ];
     await updateSheetRow('MorningPlan', plan.id, rowArray);
   };
-  const deleteMorningPlan = async (id: string) => {
+  const deleteMorningPlan = async (id: string): Promise<boolean> => {
+    const previous = morningPlans;
     setMorningPlans(prev => prev.filter(p => p.id !== id));
-    await deleteSheetRow('MorningPlan', id);
-    await deleteSheetRow('Morning Follow Up', id);
+
+    // 'Morning Follow Up' is the sheet the app actually reads plans from;
+    // 'MorningPlan' is a secondary mirror kept in sync on a best-effort basis.
+    const [primarySuccess] = await Promise.all([
+      deleteSheetRowById('Morning Follow Up', id),
+      deleteSheetRowById('MorningPlan', id),
+    ]);
+
+    if (!primarySuccess) {
+      setMorningPlans(previous);
+    }
+    return primarySuccess;
   };
   const updateEveningReport = async (report: EveningReport) => {
     setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
@@ -350,9 +362,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ];
     await updateSheetRow('EveningReport', report.id, rowArray);
   };
-  const deleteEveningReport = async (id: string) => {
+  const deleteEveningReport = async (id: string): Promise<boolean> => {
+    const previous = eveningReports;
     setEveningReports(prev => prev.filter(p => p.id !== id));
-    await deleteSheetRow('EveningReport', id);
+
+    // 'Evening Follow Up' is the sheet the app actually reads reports from.
+    const success = await deleteSheetRowById('Evening Follow Up', id);
+    if (!success) {
+      setEveningReports(previous);
+    }
+    return success;
   };
 
 
@@ -436,9 +455,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const rowArray = [ref.id, ref.referenceBy, ref.partyName, ref.contactPerson, ref.mobileNumber, ref.city, ref.address, ref.nextFollowupDate, ref.requirement, ref.remark, ref.status];
     await updateSheetRow('Reference', ref.id, rowArray);
   };
-  const deleteReference = async (id: string) => {
+  const deleteReference = async (id: string): Promise<boolean> => {
+    const previous = references;
     setReferences(prev => prev.filter(p => p.id !== id));
-    await deleteSheetRow('Reference', id);
+
+    // The actual sheet tab is named 'Refrences' (matches fetchReferencesFromSheet/submitReferenceToSheet).
+    const success = await deleteSheetRowById('Refrences', id);
+    if (!success) {
+      setReferences(previous);
+    }
+    return success;
   };
   const updateAttendanceRecord = async (rec: AttendanceRecord) => {
     setAttendanceRecords(prev => prev.map(p => p.id === rec.id ? rec : p));

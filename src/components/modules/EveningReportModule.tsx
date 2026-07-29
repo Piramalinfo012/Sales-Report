@@ -124,9 +124,13 @@ export const EveningReportModule: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this Evening Report?')) return;
-    deleteEveningReport(id);
+    const success = await deleteEveningReport(id);
+    if (!success) {
+      showToast('error', 'Delete Failed', 'Could not delete the report from the sheet. Please try again.');
+      return;
+    }
     showToast('success', 'Report Deleted', 'The evening report has been removed.');
     if (selectedGroupDetails) {
       setSelectedGroupDetails(prev => {
