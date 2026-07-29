@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet, fetchCRMOrdersFromSheet } from '../../services/api';
+import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet, fetchCRMOrdersFromSheet, deleteSheetRow, updateSheetRow } from '../../services/api';
 import { TargetRecord, CRMOrderRecord } from '../../types';
 import { getIndianDateTimeString } from '../../utils/dateUtils';
 import {
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export const formatMonthDisplay = (val: any): string => {
+const formatMonthDisplay = (val: any): string => {
   if (!val) return 'July 2026';
   const str = String(val).trim();
   if (!str) return 'July 2026';
@@ -114,7 +114,12 @@ export const TargetModule: React.FC = () => {
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonthFilter, setSelectedMonthFilter] = useState('All');
+  const currentMonthStr = useMemo(() => {
+    const d = new Date();
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[d.getMonth()]} ${d.getFullYear()}`;
+  }, []);
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState(currentMonthStr);
 
   // Edit Target State
   const [editingTarget, setEditingTarget] = useState<TargetRecord | null>(null);
@@ -179,12 +184,24 @@ export const TargetModule: React.FC = () => {
     }
   };
 
-  const handleUpdateTarget = (e: React.FormEvent) => {
+  const handleUpdateTarget = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTarget) return;
     setIsUpdating(true);
     try {
       setTargets(prev => prev.map(t => (t.id === editingTarget.id ? editingTarget : t)));
+      
+      const rowArray = [
+        editingTarget.id,
+        editingTarget.timestamp,
+        editingTarget.month,
+        editingTarget.salesPersonName,
+        editingTarget.totalNewOrders,
+        editingTarget.amount,
+        editingTarget.remark
+      ];
+      await updateSheetRow('Target', editingTarget.id, rowArray);
+
       showToast('success', 'Target Updated', 'The target record has been updated.');
       setEditingTarget(null);
     } catch (err: any) {
@@ -194,9 +211,18 @@ export const TargetModule: React.FC = () => {
     }
   };
 
-  const handleDeleteTarget = (id: string) => {
+  const handleDeleteTarget = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this target record?')) return;
+    const previousTargets = targets;
     setTargets(prev => prev.filter(t => t.id !== id));
+
+    const success = await deleteSheetRow('Target', id);
+    if (!success) {
+      setTargets(previousTargets);
+      showToast('error', 'Delete Failed', 'Could not delete the target record from the sheet. Please try again.');
+      return;
+    }
+
     showToast('success', 'Target Deleted', 'The target record has been removed.');
   };
 

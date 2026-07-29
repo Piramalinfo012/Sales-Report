@@ -57,6 +57,62 @@ export async function insertSheetRow(sheetName: string, rowArray: any[]): Promis
 }
 
 /**
+ * Helper to update row data in Google Apps Script
+ */
+export async function updateSheetRow(sheetName: string, id: string, rowArray: any[]): Promise<boolean> {
+  try {
+    const params = new URLSearchParams();
+    params.append('sheetName', sheetName);
+    params.append('action', 'update');
+    params.append('id', id);
+    params.append('rowData', JSON.stringify(rowArray));
+
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`Failed to update ${sheetName} row:`, err);
+    return false;
+  }
+}
+
+/**
+ * Helper to delete row data in Google Apps Script
+ */
+export async function deleteSheetRow(sheetName: string, id: string): Promise<boolean> {
+  try {
+    const params = new URLSearchParams();
+    params.append('sheetName', sheetName);
+    params.append('action', 'delete');
+    params.append('id', id);
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+
+    if (!response.ok) return false;
+
+    const text = await response.text();
+    try {
+      const json = JSON.parse(text);
+      if (json.status === 'error' || json.result === 'error' || json.success === false) {
+        return false;
+      }
+    } catch {
+      // Apps Script sometimes replies with plain text on success; not JSON isn't a failure.
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(`Failed to delete ${sheetName} row:`, err);
+    return false;
+  }
+}
+
+/**
  * Fetch sheet data using doGet(e) with ?sheet=SheetName
  */
 export async function fetchSheetData(sheetName: string): Promise<any[][] | null> {

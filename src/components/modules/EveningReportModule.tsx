@@ -57,7 +57,8 @@ export const EveningReportModule: React.FC = () => {
   const [selectedGroupDetails, setSelectedGroupDetails] = useState<SalesPersonGroup | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('ALL');
+  const todayDate = getIndianDateString();
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>(todayDate);
 
   // Active item being updated
   const [activePlan, setActivePlan] = useState<MorningPlan | null>(null);
@@ -407,9 +408,10 @@ export const EveningReportModule: React.FC = () => {
             onChange={(e) => setSelectedDateFilter(e.target.value)}
             className="p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-sky-500"
           >
-            <option value="ALL">All Meeting Dates ({uniqueDates.length})</option>
-            {uniqueDates.map(d => (
-              <option key={d} value={d}>{d}</option>
+            <option value={todayDate} className="bg-slate-900 text-white">Today ({todayDate})</option>
+            <option value="ALL" className="bg-slate-900 text-white">All Meeting Dates</option>
+            {uniqueDates.filter(d => d !== todayDate).map(d => (
+              <option key={d} value={d} className="bg-slate-900 text-white">{d}</option>
             ))}
           </select>
         </div>

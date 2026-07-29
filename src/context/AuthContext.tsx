@@ -1,6 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer, ReferenceRecord, LeaveRecord } from '../types';
-import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet, fetchLeavesFromSheet, fetchMorningPlansFromSheet, fetchEveningReportsFromSheet } from '../services/api';
+import { 
+  loginWithGoogleSheet, 
+  saveGPSToSheet, 
+  fetchGPSDataFromSheet, 
+  fetchReferencesFromSheet, 
+  fetchLeavesFromSheet, 
+  fetchMorningPlansFromSheet, 
+  fetchEveningReportsFromSheet,
+  deleteSheetRow,
+  updateSheetRow
+} from '../services/api';
 
 interface AuthContextType {
   authState: AuthState;
@@ -318,10 +328,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEveningReports(prev => [report, ...prev]);
   };
 
-  const updateMorningPlan = (plan: MorningPlan) => setMorningPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
-  const deleteMorningPlan = (id: string) => setMorningPlans(prev => prev.filter(p => p.id !== id));
-  const updateEveningReport = (report: EveningReport) => setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
-  const deleteEveningReport = (id: string) => setEveningReports(prev => prev.filter(p => p.id !== id));
+  const updateMorningPlan = async (plan: MorningPlan) => {
+    setMorningPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
+    const rowArray = [
+      plan.id, plan.salesPersonId, plan.salesPersonName, plan.meetingDate, plan.partyName,
+      plan.contactPerson, plan.mobileNumber, plan.city, plan.purpose, plan.expectedBusiness,
+      plan.priority, plan.remarks, plan.status, plan.createdAt, plan.latitude || '', plan.longitude || '', plan.address || ''
+    ];
+    await updateSheetRow('MorningPlan', plan.id, rowArray);
+  };
+  const deleteMorningPlan = async (id: string) => {
+    setMorningPlans(prev => prev.filter(p => p.id !== id));
+    await deleteSheetRow('MorningPlan', id);
+    await deleteSheetRow('Morning Follow Up', id);
+  };
+  const updateEveningReport = async (report: EveningReport) => {
+    setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
+    const rowArray = [
+      report.id, report.morningPlanId, report.date, report.salesPersonName, report.partyName,
+      report.visited, report.discussion, report.expectedOrder, report.orderProbability, report.nextFollowUpDate, report.createdAt
+    ];
+    await updateSheetRow('EveningReport', report.id, rowArray);
+  };
+  const deleteEveningReport = async (id: string) => {
+    setEveningReports(prev => prev.filter(p => p.id !== id));
+    await deleteSheetRow('EveningReport', id);
+  };
+
 
 
   const addGPSRecord = (record: GPSRecord) => {
@@ -389,12 +422,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setReferences(prev => [ref, ...prev]);
   };
 
-  const updateCustomer = (cust: Customer) => setCustomers(prev => prev.map(p => p.id === cust.id ? cust : p));
-  const deleteCustomer = (id: string) => setCustomers(prev => prev.filter(p => p.id !== id));
-  const updateReference = (ref: ReferenceRecord) => setReferences(prev => prev.map(p => p.id === ref.id ? ref : p));
-  const deleteReference = (id: string) => setReferences(prev => prev.filter(p => p.id !== id));
-  const updateAttendanceRecord = (rec: AttendanceRecord) => setAttendanceRecords(prev => prev.map(p => p.id === rec.id ? rec : p));
-  const deleteAttendanceRecord = (id: string) => setAttendanceRecords(prev => prev.filter(p => p.id !== id));
+  const updateCustomer = async (cust: Customer) => {
+    setCustomers(prev => prev.map(p => p.id === cust.id ? cust : p));
+    const rowArray = [cust.id, cust.partyName, cust.contactPerson, cust.mobileNumber, cust.city, cust.crmId, cust.totalOrders, cust.lastVisitDate];
+    await updateSheetRow('Customer', cust.id, rowArray);
+  };
+  const deleteCustomer = async (id: string) => {
+    setCustomers(prev => prev.filter(p => p.id !== id));
+    await deleteSheetRow('Customer', id);
+  };
+  const updateReference = async (ref: ReferenceRecord) => {
+    setReferences(prev => prev.map(p => p.id === ref.id ? ref : p));
+    const rowArray = [ref.id, ref.referenceBy, ref.partyName, ref.contactPerson, ref.mobileNumber, ref.city, ref.address, ref.nextFollowupDate, ref.requirement, ref.remark, ref.status];
+    await updateSheetRow('Reference', ref.id, rowArray);
+  };
+  const deleteReference = async (id: string) => {
+    setReferences(prev => prev.filter(p => p.id !== id));
+    await deleteSheetRow('Reference', id);
+  };
+  const updateAttendanceRecord = async (rec: AttendanceRecord) => {
+    setAttendanceRecords(prev => prev.map(p => p.id === rec.id ? rec : p));
+    const rowArray = [rec.id, rec.salesPersonId, rec.salesPersonName, rec.date, rec.timeIn, rec.timeOut, rec.status, rec.location];
+    await updateSheetRow('Attendance', rec.id, rowArray);
+  };
+  const deleteAttendanceRecord = async (id: string) => {
+    setAttendanceRecords(prev => prev.filter(p => p.id !== id));
+    await deleteSheetRow('Attendance', id);
+  };
 
 
   const refreshMorningPlans = async () => {

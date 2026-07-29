@@ -97,8 +97,8 @@ export const GPSTrackingModule: React.FC = () => {
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [mobileFilter, setMobileFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getIndianDateString());
+  const [dateTo, setDateTo] = useState(getIndianDateString());
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
   // Auto Refresh GPS Sheet Data on Mount
