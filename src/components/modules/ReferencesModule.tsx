@@ -20,17 +20,20 @@ import {
   Briefcase,
   Download,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const ReferencesModule: React.FC = () => {
-  const { authState, references, addReference, refreshReferences, showToast } = useAuth();
+  const { authState, references, addReference, updateReference, deleteReference, refreshReferences, showToast } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [salesPersonList, setSalesPersonList] = useState<string[]>([]);
 
@@ -81,6 +84,29 @@ export const ReferencesModule: React.FC = () => {
     setShowModal(true);
   };
 
+  const openEditModal = (ref: ReferenceRecord) => {
+    setEditingId(ref.id || null);
+    setRefGivenBy(ref.refGivenBy || '');
+    setRefGivenCompanyName(ref.refGivenCompanyName || '');
+    setAllottedToSalesPersonName(ref.allottedToSalesPersonName || '');
+    setAllottedByWhom(ref.allottedByWhom || '');
+    setCompanyName(ref.companyName || '');
+    setClientName(ref.clientName || '');
+    setDesignation(ref.designation || '');
+    setClientNumber(ref.clientNumber || '');
+    setAddress(ref.address || '');
+    setRemarks(ref.remarks || '');
+    setNextFollowupDate(ref.nextFollowupDate || getIndianDateString());
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete reference for ${name}?`)) {
+      deleteReference(id);
+      showToast('info', 'Reference Deleted', `Reference for ${name} removed.`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -106,10 +132,17 @@ export const ReferencesModule: React.FC = () => {
     };
 
     try {
-      const createdRef = await submitReferenceToSheet(refPayload);
-      addReference(createdRef);
-      showToast('success', 'Reference Saved', `Reference for ${clientName} (${companyName}) created.`);
-      setShowModal(false);
+      if (editingId) {
+        updateReference({ ...refPayload, id: editingId });
+        showToast('success', 'Reference Updated', `Reference for ${clientName} (${companyName}) updated.`);
+        setShowModal(false);
+        setEditingId(null);
+      } else {
+        const createdRef = await submitReferenceToSheet(refPayload);
+        addReference(createdRef);
+        showToast('success', 'Reference Saved', `Reference for ${clientName} (${companyName}) created.`);
+        setShowModal(false);
+      }
     } catch (err: any) {
       showToast('error', 'Submission Failed', err.message || 'Could not save reference.');
     } finally {
@@ -311,6 +344,7 @@ export const ReferencesModule: React.FC = () => {
                 <th className="p-3">Address</th>
                 <th className="p-3">Remarks</th>
                 <th className="p-3 text-center">Next Followup</th>
+                <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -411,6 +445,14 @@ export const ReferencesModule: React.FC = () => {
                         {ref.nextFollowupDate ? convertInputDateToDDMMYYYY(ref.nextFollowupDate) : '-'}
                       </span>
                     </td>
+                    <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                      <button onClick={() => openEditModal(ref)} className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(ref.id!, ref.clientName)} className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -435,14 +477,17 @@ export const ReferencesModule: React.FC = () => {
                     <UserPlus className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-white">Add New Reference Record</h3>
+                    <h3 className="font-bold text-lg text-white">{editingId ? 'Edit Reference Record' : 'Add New Reference Record'}</h3>
                     <p className="text-xs text-slate-400">
                       Fill in the reference details to register it in the system
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingId(null);
+                  }}
                   className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
                 >
                   <X className="w-5 h-5" />
@@ -618,25 +663,23 @@ export const ReferencesModule: React.FC = () => {
                   >
                     Cancel
                   </button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 cursor-pointer disabled:opacity-60"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Saving Reference...</span>
+                        <span>Saving...</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Save Reference</span>
+                        <span>{editingId ? 'Update Reference' : 'Submit Reference'}</span>
                       </>
                     )}
-                  </motion.button>
+                  </button>
                 </div>
               </form>
             </motion.div>

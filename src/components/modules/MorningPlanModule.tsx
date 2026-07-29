@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { MorningPlan } from '../../types';
-import { submitMorningPlanToSheet, fetchMorningPlansFromSheet, fetchSalesPersonsFromLoginSheet } from '../../services/api';
+import { submitMorningPlanToSheet, fetchSalesPersonsFromLoginSheet } from '../../services/api';
 import { getIndianDateString, convertDDMMYYYYToInputDate, convertInputDateToDDMMYYYY } from '../../utils/dateUtils';
 import {
   Sun,
@@ -43,7 +43,7 @@ interface SalesPersonSummaryGroup {
 }
 
 export const MorningPlanModule: React.FC = () => {
-  const { authState, morningPlans, addMorningPlan, captureGPSLocation, showToast } = useAuth();
+  const { authState, morningPlans, addMorningPlan, refreshMorningPlans, captureGPSLocation, showToast } = useAuth();
   const user = authState.user;
 
   const [showModal, setShowModal] = useState(false);
@@ -105,13 +105,7 @@ export const MorningPlanModule: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    fetchMorningPlansFromSheet().then(remotePlans => {
-      if (isMounted && remotePlans && remotePlans.length > 0) {
-        remotePlans.forEach(plan => {
-          addMorningPlan(plan);
-        });
-      }
-    });
+    refreshMorningPlans();
     fetchSalesPersonsFromLoginSheet().then(names => {
       if (isMounted && names && names.length > 0) {
         setSalesPersonsList(names);

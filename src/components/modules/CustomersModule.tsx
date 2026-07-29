@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Customer } from '../../types';
-import { Users, Plus, Search, Building2, Phone, MapPin, IndianRupee, Shield } from 'lucide-react';
+import { Users, Plus, Search, Building2, Phone, MapPin, IndianRupee, Shield, Edit2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const CustomersModule: React.FC = () => {
-  const { customers, addCustomer, showToast } = useAuth();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, showToast } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form states
   const [partyName, setPartyName] = useState('');
@@ -27,17 +28,41 @@ export const CustomersModule: React.FC = () => {
       mobileNumber,
       city,
       crmId,
-      totalOrders: 0,
-      lastVisitDate: new Date().toISOString().split('T')[0],
+      totalOrders: editingId ? (customers.find(c => c.id === editingId)?.totalOrders || 0) : 0,
+      lastVisitDate: editingId ? (customers.find(c => c.id === editingId)?.lastVisitDate || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
     };
 
-    addCustomer(newCust);
-    showToast('success', 'Customer Added', `${partyName} saved to CRM directory.`);
+    if (editingId) {
+      updateCustomer({ ...newCust, id: editingId });
+      showToast('success', 'Customer Updated', `${partyName} details updated.`);
+    } else {
+      addCustomer(newCust);
+      showToast('success', 'Customer Added', `${partyName} saved to CRM directory.`);
+    }
+
     setPartyName('');
     setContactPerson('');
     setMobileNumber('');
     setCity('');
+    setEditingId(null);
     setShowModal(false);
+  };
+
+  const openEditModal = (cust: Customer) => {
+    setEditingId(cust.id);
+    setPartyName(cust.partyName);
+    setContactPerson(cust.contactPerson);
+    setMobileNumber(cust.mobileNumber);
+    setCity(cust.city);
+    setCrmId(cust.crmId);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      deleteCustomer(id);
+      showToast('info', 'Customer Deleted', `${name} has been removed.`);
+    }
   };
 
   const filteredCustomers = customers.filter(c =>
@@ -63,7 +88,15 @@ export const CustomersModule: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingId(null);
+            setPartyName('');
+            setContactPerson('');
+            setMobileNumber('');
+            setCity('');
+            setCrmId(`CRM-${Math.floor(100 + Math.random() * 900)}`);
+            setShowModal(true);
+          }}
           className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-500/20 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -98,6 +131,14 @@ export const CustomersModule: React.FC = () => {
                   {cust.crmId}
                 </span>
                 <h3 className="font-bold text-base text-white mt-1">{cust.partyName}</h3>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={() => openEditModal(cust)} className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-colors">
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(cust.id, cust.partyName)} className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -143,9 +184,12 @@ export const CustomersModule: React.FC = () => {
               className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-slate-200 shadow-2xl space-y-4"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="font-bold text-base text-white">Add New Customer Party</h3>
+                <h3 className="font-bold text-base text-white">{editingId ? 'Edit Customer' : 'Add New Customer Party'}</h3>
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingId(null);
+                  }}
                   className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg bg-slate-800"
                 >
                   Cancel
@@ -203,7 +247,7 @@ export const CustomersModule: React.FC = () => {
                   type="submit"
                   className="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/20"
                 >
-                  Save Party to CRM
+                  {editingId ? 'Update Party' : 'Save Party to CRM'}
                 </button>
               </form>
             </motion.div>

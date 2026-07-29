@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ToastMessage, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, Customer, ReferenceRecord, LeaveRecord } from '../types';
-import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet, fetchLeavesFromSheet } from '../services/api';
+import { loginWithGoogleSheet, saveGPSToSheet, fetchGPSDataFromSheet, fetchReferencesFromSheet, fetchLeavesFromSheet, fetchMorningPlansFromSheet, fetchEveningReportsFromSheet } from '../services/api';
 
 interface AuthContextType {
   authState: AuthState;
@@ -33,6 +33,20 @@ interface AuthContextType {
   refreshReferences: () => Promise<void>;
   leaveRecords: LeaveRecord[];
   refreshLeaves: () => Promise<void>;
+  refreshMorningPlans: () => Promise<void>;
+  refreshEveningReports: () => Promise<void>;
+
+
+  updateMorningPlan: (plan: MorningPlan) => void;
+  deleteMorningPlan: (id: string) => void;
+  updateEveningReport: (report: EveningReport) => void;
+  deleteEveningReport: (id: string) => void;
+  updateCustomer: (cust: Customer) => void;
+  deleteCustomer: (id: string) => void;
+  updateReference: (ref: ReferenceRecord) => void;
+  deleteReference: (id: string) => void;
+  updateAttendanceRecord: (rec: AttendanceRecord) => void;
+  deleteAttendanceRecord: (id: string) => void;
 }
 
 const LOCAL_STORAGE_USER_KEY = 'sales_reporting_user';
@@ -195,6 +209,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Periodic data sync from Google Sheets to keep local state up to date in real-time
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+
+    const syncRemoteData = async () => {
+      await Promise.all([
+        refreshMorningPlans(),
+        refreshEveningReports(),
+        refreshGPSData(),
+        refreshReferences(),
+        refreshLeaves()
+      ]).catch(err => console.warn('Error in periodic sync:', err));
+    };
+
+    // Sync immediately on mount / login
+    syncRemoteData();
+
+    // Poll every 10 seconds for fast real-time updates
+    const interval = setInterval(syncRemoteData, 10000);
+    return () => clearInterval(interval);
+  }, [authState.isAuthenticated]);
+
+
   const showToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
     setToasts(prev => [...prev, { id, type, title, message }]);
@@ -281,6 +318,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEveningReports(prev => [report, ...prev]);
   };
 
+  const updateMorningPlan = (plan: MorningPlan) => setMorningPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
+  const deleteMorningPlan = (id: string) => setMorningPlans(prev => prev.filter(p => p.id !== id));
+  const updateEveningReport = (report: EveningReport) => setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
+  const deleteEveningReport = (id: string) => setEveningReports(prev => prev.filter(p => p.id !== id));
+
+
   const addGPSRecord = (record: GPSRecord) => {
     setGpsRecords(prev => [record, ...prev]);
   };
@@ -346,18 +389,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setReferences(prev => [ref, ...prev]);
   };
 
+  const updateCustomer = (cust: Customer) => setCustomers(prev => prev.map(p => p.id === cust.id ? cust : p));
+  const deleteCustomer = (id: string) => setCustomers(prev => prev.filter(p => p.id !== id));
+  const updateReference = (ref: ReferenceRecord) => setReferences(prev => prev.map(p => p.id === ref.id ? ref : p));
+  const deleteReference = (id: string) => setReferences(prev => prev.filter(p => p.id !== id));
+  const updateAttendanceRecord = (rec: AttendanceRecord) => setAttendanceRecords(prev => prev.map(p => p.id === rec.id ? rec : p));
+  const deleteAttendanceRecord = (id: string) => setAttendanceRecords(prev => prev.filter(p => p.id !== id));
+
+
+  const refreshMorningPlans = async () => {
+    try {
+      const remotePlans = await fetchMorningPlansFromSheet();
+      if (remotePlans) {
+        setMorningPlans(remotePlans);
+      }
+    } catch (err) {
+      console.warn('Error refreshing morning plans:', err);
+    }
+  };
+
+  const refreshEveningReports = async () => {
+    try {
+      const remoteReports = await fetchEveningReportsFromSheet();
+      if (remoteReports) {
+        setEveningReports(remoteReports);
+      }
+    } catch (err) {
+      console.warn('Error refreshing evening reports:', err);
+    }
+  };
+
   const refreshReferences = async () => {
     try {
       const remoteRefs = await fetchReferencesFromSheet();
-      if (remoteRefs && remoteRefs.length > 0) {
-        setReferences(prev => {
-          const map = new Map<string, ReferenceRecord>();
-          remoteRefs.forEach(r => map.set(r.id, r));
-          prev.forEach(r => {
-            if (!map.has(r.id)) map.set(r.id, r);
-          });
-          return Array.from(map.values());
-        });
+      if (remoteRefs) {
+        setReferences(remoteRefs);
       }
     } catch (err) {
       console.warn('Error fetching references from sheet:', err);
@@ -367,15 +433,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshLeaves = async () => {
     try {
       const remoteLeaves = await fetchLeavesFromSheet();
-      if (remoteLeaves && remoteLeaves.length > 0) {
-        setLeaveRecords(prev => {
-          const map = new Map<string, LeaveRecord>();
-          remoteLeaves.forEach(r => map.set(r.id, r));
-          prev.forEach(r => {
-            if (!map.has(r.id)) map.set(r.id, r);
-          });
-          return Array.from(map.values());
-        });
+      if (remoteLeaves) {
+        setLeaveRecords(remoteLeaves);
       }
     } catch (err) {
       console.warn('Error fetching leave records from sheet:', err);
@@ -457,6 +516,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshReferences,
         leaveRecords,
         refreshLeaves,
+        refreshMorningPlans,
+        refreshEveningReports,
+        updateMorningPlan,
+        deleteMorningPlan,
+        updateEveningReport,
+        deleteEveningReport,
+        updateCustomer,
+        deleteCustomer,
+        updateReference,
+        deleteReference,
+        updateAttendanceRecord,
+        deleteAttendanceRecord,
       }}
     >
       {children}
