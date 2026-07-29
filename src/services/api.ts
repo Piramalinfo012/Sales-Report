@@ -113,6 +113,41 @@ export async function deleteSheetRow(sheetName: string, id: string): Promise<boo
 }
 
 /**
+ * Delete a row by its actual sheet row number (1-based, header = row 1).
+ * The Apps Script backend's 'delete' action reads params.rowIndex, not an id.
+ */
+export async function deleteSheetRowByIndex(sheetName: string, rowIndex: number): Promise<boolean> {
+  try {
+    const params = new URLSearchParams();
+    params.append('sheetName', sheetName);
+    params.append('action', 'delete');
+    params.append('rowIndex', String(rowIndex));
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+
+    if (!response.ok) return false;
+
+    const text = await response.text();
+    try {
+      const json = JSON.parse(text);
+      if (json.status === 'error' || json.result === 'error' || json.success === false) {
+        return false;
+      }
+    } catch {
+      // Apps Script sometimes replies with plain text on success; not JSON isn't a failure.
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(`Failed to delete ${sheetName} row by index:`, err);
+    return false;
+  }
+}
+
+/**
  * Fetch sheet data using doGet(e) with ?sheet=SheetName
  */
 export async function fetchSheetData(sheetName: string): Promise<any[][] | null> {
@@ -621,6 +656,7 @@ export async function fetchTargetsFromSheet(): Promise<TargetRecord[]> {
 
     targets.push({
       id: String(row[0] || `TGT-${i}`),
+      rowIndex: i + 1,
       timestamp: getIndianDateTimeString(row[1] || new Date()),
       month: String(row[2] || ''),
       salesPersonName: String(row[3] || 'All Sales Reps'),

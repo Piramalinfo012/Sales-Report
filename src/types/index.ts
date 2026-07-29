@@ -121,6 +121,7 @@ export interface Customer {
 
 export interface TargetRecord {
   id: string;
+  rowIndex?: number;
   timestamp: string;
   month: string;
   salesPersonName: string;
