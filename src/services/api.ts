@@ -840,6 +840,7 @@ export async function submitReferenceToSheet(ref: Omit<ReferenceRecord, 'id'>): 
  * A) Timestamp | B) LR-Unique No. | C) Requested By | D) Departments
  * E) Total No of leave days | F) Job location | G) Date of leave FROM | H) TO
  * I) Reason for Taking | J) Remark | K) Image
+ * ... | O) Approved By | P) Status
  */
 export async function fetchLeavesFromSheet(): Promise<LeaveRecord[]> {
   const rows = await fetchSheetData('Leave');
@@ -871,6 +872,8 @@ export async function fetchLeavesFromSheet(): Promise<LeaveRecord[]> {
       reason: String(row[8] || ''),
       remark: String(row[9] || ''),
       imageUrl: String(row[10] || ''),
+      approvedBy: String(row[14] || ''),
+      status: String(row[15] || ''),
     });
   }
 

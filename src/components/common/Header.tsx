@@ -37,9 +37,11 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
     refreshLeaves();
   }, []);
 
-  // Sales persons currently on approved leave for today's date
+  // Sales department persons currently on approved leave for today's date
   const todayStr = getIndianDateString();
   const leaveNotifications = leaveRecords
+    .filter(l => (l.department || '').trim().toLowerCase() === 'sales')
+    .filter(l => (l.status || '').trim().toLowerCase() === 'approved')
     .filter(l => isDateWithinRange(todayStr, l.dateFrom, l.dateTo))
     .map(l => ({
       id: `leave-${l.id}`,

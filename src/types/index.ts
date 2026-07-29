@@ -164,6 +164,8 @@ export interface LeaveRecord {
   reason: string;
   remark: string;
   imageUrl: string;
+  approvedBy?: string;
+  status?: string;
 }
 
 export interface ToastMessage {
