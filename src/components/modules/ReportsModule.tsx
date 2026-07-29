@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getIndianDateString } from '../../utils/dateUtils';
-import { FileSpreadsheet, Download, Filter, FileText, FileCode, Search, Calendar, User, Shield } from 'lucide-react';
+import { FileSpreadsheet, Download, Filter, FileText, FileCode, Search, Calendar, User, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
@@ -37,6 +37,57 @@ export const ReportsModule: React.FC = () => {
       discussion: report ? report.discussion : plan.purpose,
     };
   });
+
+  // ===== Visit Calendar =====
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+
+  const [calendarMonthDate, setCalendarMonthDate] = useState(() => new Date());
+  const [calendarSalesPerson, setCalendarSalesPerson] = useState('All');
+
+  const goToPrevMonth = () => setCalendarMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const goToNextMonth = () => setCalendarMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  const goToCurrentMonth = () => setCalendarMonthDate(new Date());
+
+  // Plan & Actual visit counts per day (key: DD-MM-YYYY), for the selected sales person
+  const calendarCounts = useMemo(() => {
+    const map = new Map<string, { plan: number; actual: number }>();
+    combinedData.forEach(item => {
+      if (calendarSalesPerson !== 'All' && item.salesPerson !== calendarSalesPerson) return;
+      if (!map.has(item.meetingDate)) map.set(item.meetingDate, { plan: 0, actual: 0 });
+      const entry = map.get(item.meetingDate)!;
+      entry.plan += 1;
+      if (item.visited === 'Yes') entry.actual += 1;
+    });
+    return map;
+  }, [combinedData, calendarSalesPerson]);
+
+  // Grid cells for the currently viewed month (padded to full weeks)
+  const calendarGrid = useMemo(() => {
+    const year = calendarMonthDate.getFullYear();
+    const month = calendarMonthDate.getMonth();
+    const firstDayWeekday = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const todayKey = getIndianDateString();
+
+    const cells: Array<{ day: number; inCurrentMonth: boolean; dateKey?: string; isToday?: boolean }> = [];
+
+    for (let i = firstDayWeekday - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrevMonth - i, inCurrentMonth: false });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateKey = `${pad2(d)}-${pad2(month + 1)}-${year}`;
+      cells.push({ day: d, inCurrentMonth: true, dateKey, isToday: dateKey === todayKey });
+    }
+    let trailDay = 1;
+    while (cells.length % 7 !== 0) {
+      cells.push({ day: trailDay++, inCurrentMonth: false });
+    }
+
+    return cells;
+  }, [calendarMonthDate]);
 
   // Filtered dataset
   const filteredData = combinedData.filter(item => {
@@ -212,6 +263,129 @@ export const ReportsModule: React.FC = () => {
             <option value="No">Not Visited</option>
             <option value="Pending">Pending</option>
           </select>
+        </div>
+      </div>
+
+      {/* Visit Calendar */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-lg shadow-indigo-950/30">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-base text-white">Visit Calendar</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Planned vs Actual client visits, day by day</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={calendarSalesPerson}
+              onChange={(e) => setCalendarSalesPerson(e.target.value)}
+              className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="All">All Sales Reps</option>
+              {salesPersons.map(sp => (
+                <option key={sp} value={sp}>{sp}</option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={goToPrevMonth}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+                title="Previous Month"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={goToCurrentMonth}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-indigo-400 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={goToNextMonth}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+                title="Next Month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white">
+            {MONTH_NAMES[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
+          </h3>
+          <div className="flex items-center gap-4 text-[11px] font-semibold">
+            <span className="flex items-center gap-1.5 text-amber-400">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+              <span>Plan</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+              <span>Actual</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          {WEEKDAY_LABELS.map(d => (
+            <div key={d}>{d}</div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          {calendarGrid.map((cell, idx) => {
+            const counts = cell.dateKey ? calendarCounts.get(cell.dateKey) : undefined;
+            return (
+              <div
+                key={idx}
+                className={`min-h-[4.5rem] sm:min-h-[5.5rem] rounded-xl border p-1.5 sm:p-2 flex flex-col transition-colors ${
+                  !cell.inCurrentMonth
+                    ? 'bg-slate-950/40 border-slate-800/40'
+                    : cell.isToday
+                    ? 'bg-indigo-950/40 border-indigo-500/60 ring-1 ring-indigo-500/40'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span
+                  className={`text-[11px] font-bold ${
+                    !cell.inCurrentMonth
+                      ? 'text-slate-700'
+                      : cell.isToday
+                      ? 'text-indigo-300'
+                      : 'text-slate-300'
+                  }`}
+                >
+                  {cell.day}
+                </span>
+
+                {cell.inCurrentMonth && counts && (counts.plan > 0 || counts.actual > 0) && (
+                  <div className="mt-auto space-y-1">
+                    {counts.plan > 0 && (
+                      <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-1 py-0.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                        <span className="truncate">Plan {counts.plan}</span>
+                      </div>
+                    )}
+                    {counts.actual > 0 && (
+                      <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-1 py-0.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span className="truncate">Actual {counts.actual}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

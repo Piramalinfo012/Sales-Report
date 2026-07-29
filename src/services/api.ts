@@ -79,6 +79,45 @@ export async function updateSheetRow(sheetName: string, id: string, rowArray: an
 }
 
 /**
+ * Uploads a single file to a Google Drive folder via the Apps Script 'uploadFile' action
+ * and returns the resulting shareable file URL, or null on failure.
+ */
+export async function uploadFileToDrive(file: File, folderId: string): Promise<string | null> {
+  try {
+    const base64Data: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+    const params = new URLSearchParams();
+    params.append('action', 'uploadFile');
+    params.append('base64Data', base64Data);
+    params.append('fileName', file.name);
+    params.append('mimeType', file.type || 'application/octet-stream');
+    params.append('folderId', folderId);
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: params,
+    });
+
+    if (!response.ok) return null;
+
+    const text = await response.text();
+    const json = JSON.parse(text);
+    if (json.success && json.fileUrl) {
+      return json.fileUrl as string;
+    }
+    return null;
+  } catch (err) {
+    console.warn(`Failed to upload file ${file.name}:`, err);
+    return null;
+  }
+}
+
+/**
  * Helper to delete row data in Google Apps Script
  */
 export async function deleteSheetRow(sheetName: string, id: string): Promise<boolean> {
@@ -396,8 +435,8 @@ export async function submitEveningReportToSheet(report: Omit<EveningReport, 'id
     submittedAt: getIndianDateTimeString(),
   };
 
-  // 10-column format strictly matching Google Sheet tab 'Evening Follow Up':
-  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date
+  // 11-column format strictly matching Google Sheet tab 'Evening Follow Up':
+  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date | Col K: Attachment
   const eveningFollowUp10Cols = [
     newReport.morningPlanId || newReport.id,
     newReport.meetingDate ? getIndianDateString(newReport.meetingDate) : getIndianDateString(),
@@ -409,6 +448,7 @@ export async function submitEveningReportToSheet(report: Omit<EveningReport, 'id
     newReport.designation || '',
     newReport.remarks || newReport.discussion || '',
     newReport.followUpDate ? getIndianDateString(newReport.followUpDate) : '',
+    newReport.attachmentUrls || '',
   ];
 
   const fullRowData = [
@@ -454,7 +494,7 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
           if (!row || row.length === 0 || !row[0]) continue;
 
           if (row.length <= 12) {
-            // 10-column format: Uid | Date | Sales Person Name | Company Name | Address | Client | Contact Number | Designation | Remarks | Next Follow Up Date
+            // 10/11-column format: Uid | Date | Sales Person Name | Company Name | Address | Client | Contact Number | Designation | Remarks | Next Follow Up Date | Attachment
             const uid = String(row[0] || `ER-${i}`);
             const date = getIndianDateString(row[1] || new Date());
             const salesPersonName = String(row[2] || '');
@@ -465,6 +505,7 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
             const designation = String(row[7] || '');
             const remarks = String(row[8] || '');
             const followUpDate = getIndianDateString(row[9] || '');
+            const attachmentUrls = String(row[10] || '');
 
             reports.push({
               id: uid,
@@ -481,6 +522,7 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
               remarks,
               discussion: remarks,
               followUpDate,
+              attachmentUrls,
               status: 'Completed',
               submittedAt: getIndianDateTimeString(),
             });

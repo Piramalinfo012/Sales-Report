@@ -25,7 +25,9 @@ import {
   ExternalLink,
   Clock,
   Briefcase,
-  Edit2
+  Edit2,
+  UserX,
+  Plane
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -79,6 +81,10 @@ export const MorningPlanModule: React.FC = () => {
   ]);
   const [meetingDate, setMeetingDate] = useState(getIndianDateString());
 
+  // Day status: whether the sales person is visiting clients, on leave, or travelling
+  const [dayStatus, setDayStatus] = useState<'visit' | 'leave' | 'travel'>('visit');
+  const [statusRemark, setStatusRemark] = useState('');
+
   // Dynamic array of companies for form
   const [companies, setCompanies] = useState<CompanyVisitEntry[]>([
     { id: '1', partyName: '', address: '', remarks: '' },
@@ -123,6 +129,50 @@ export const MorningPlanModule: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Sales person is on leave or travelling today — save a single simplified record
+    if (dayStatus !== 'visit') {
+      if (!statusRemark.trim()) {
+        showToast('error', 'Incomplete Form', 'Please enter a remark.');
+        return;
+      }
+
+      setIsSubmitting(true);
+      const gpsRec = await captureGPSLocation('Morning Plan Submission');
+      const statusLabel = dayStatus === 'leave' ? 'On Leave' : 'Travelling';
+
+      try {
+        const planData: Omit<MorningPlan, 'id' | 'createdAt'> = {
+          salesPersonId: user?.id || 'SALES01',
+          salesPersonName: salesPersonName || user?.userName || 'Sales Executive',
+          meetingDate: getIndianDateString(meetingDate),
+          partyName: statusLabel,
+          contactPerson: statusLabel,
+          mobileNumber: '',
+          city: statusLabel,
+          purpose: statusRemark.trim(),
+          expectedBusiness: 0,
+          priority: 'High',
+          remarks: statusRemark.trim(),
+          status: 'Submitted',
+          latitude: gpsRec?.latitude,
+          longitude: gpsRec?.longitude,
+          address: gpsRec?.address || '',
+        };
+
+        const createdPlan = await submitMorningPlanToSheet(planData);
+        addMorningPlan(createdPlan);
+        showToast('success', 'Recorded', `${statusLabel} recorded for ${salesPersonName}.`);
+        setStatusRemark('');
+        setDayStatus('visit');
+        setShowModal(false);
+      } catch (err: any) {
+        showToast('error', 'Submission Failed', err.message || 'Could not save record.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
     // Validate that at least one company name is filled
     const validCompanies = companies.filter(c => c.partyName.trim() !== '');
@@ -667,6 +717,66 @@ export const MorningPlanModule: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Day Status: Visiting Clients / On Leave / Travelling */}
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1.5">Today's Status</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDayStatus('visit')}
+                      className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                        dayStatus === 'visit'
+                          ? 'bg-amber-500 border-amber-500 text-slate-950'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Building className="w-3.5 h-3.5" />
+                      <span>Visiting Clients</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDayStatus('leave')}
+                      className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                        dayStatus === 'leave'
+                          ? 'bg-amber-500 border-amber-500 text-slate-950'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                      <span>On Leave</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDayStatus('travel')}
+                      className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                        dayStatus === 'travel'
+                          ? 'bg-amber-500 border-amber-500 text-slate-950'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Plane className="w-3.5 h-3.5" />
+                      <span>Travelling</span>
+                    </button>
+                  </div>
+                </div>
+
+                {dayStatus !== 'visit' ? (
+                  /* Leave / Travelling: just a remark, no company visits needed */
+                  <div className="pt-2 border-t border-slate-800">
+                    <label className="block text-slate-300 font-semibold mb-1">
+                      Remark <span className="text-rose-400">*</span>
+                    </label>
+                    <textarea
+                      value={statusRemark}
+                      onChange={(e) => setStatusRemark(e.target.value)}
+                      rows={3}
+                      placeholder={dayStatus === 'leave' ? 'e.g. On leave due to fever, back tomorrow' : 'e.g. Travelling to Raipur, expected arrival 6 PM'}
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                      required
+                    />
+                  </div>
+                ) : (
+                <>
                 {/* Dynamic List of Companies */}
                 <div className="space-y-4 pt-2 border-t border-slate-800">
                   <div className="flex items-center justify-between">
@@ -741,6 +851,8 @@ export const MorningPlanModule: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                </>
+                )}
 
                 <div className="p-3 bg-amber-950/30 border border-amber-800/40 rounded-xl text-[11px] text-amber-200 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
@@ -768,7 +880,11 @@ export const MorningPlanModule: React.FC = () => {
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Submit Morning Plan ({companies.length})</span>
+                        <span>
+                          {dayStatus === 'visit'
+                            ? `Submit Morning Plan (${companies.length})`
+                            : `Save ${dayStatus === 'leave' ? 'Leave' : 'Travelling'} Record`}
+                        </span>
                       </>
                     )}
                   </button>

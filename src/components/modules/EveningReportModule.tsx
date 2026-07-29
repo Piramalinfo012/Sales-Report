@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { EveningReport, MorningPlan } from '../../types';
-import { submitEveningReportToSheet } from '../../services/api';
+import { submitEveningReportToSheet, uploadFileToDrive } from '../../services/api';
 import { getIndianDateString, convertDDMMYYYYToInputDate, convertInputDateToDDMMYYYY } from '../../utils/dateUtils';
 import {
   Moon,
@@ -23,7 +23,8 @@ import {
   User,
   ChevronRight,
   X,
-  Trash2
+  Trash2,
+  Paperclip
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -79,6 +80,12 @@ export const EveningReportModule: React.FC = () => {
     getIndianDateString(new Date(Date.now() + 86400000 * 3))
   );
 
+  // Attachments for the Update Evening Follow Up form (Column K)
+  const EVENING_ATTACHMENT_FOLDER_ID = '1CfN3oREhoozRw0s3g14wuG0UnGdphj9d';
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [existingAttachmentUrls, setExistingAttachmentUrls] = useState('');
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+
   // Open update modal for a specific Morning Plan / Company item
   const openUpdateModal = (plan?: MorningPlan, existingReport?: EveningReport, defaultSalesPerson?: string, defaultParty?: string, defaultDate?: string, defaultUid?: string, defaultAddress?: string, defaultClient?: string, defaultContact?: string) => {
     if (plan) {
@@ -94,6 +101,8 @@ export const EveningReportModule: React.FC = () => {
       setRemarks(existingReport?.remarks || existingReport?.discussion || plan.remarks || '');
       setNextFollowUpDate(existingReport?.followUpDate || getIndianDateString(new Date(Date.now() + 86400000 * 3)));
       setEditingReportId(existingReport?.id || null);
+      setAttachmentFiles([]);
+      setExistingAttachmentUrls(existingReport?.attachmentUrls || '');
     } else if (existingReport) {
       setActivePlan(null);
       setUid(existingReport.morningPlanId || existingReport.id);
@@ -107,6 +116,8 @@ export const EveningReportModule: React.FC = () => {
       setDesignation(existingReport.designation || '');
       setRemarks(existingReport.remarks || existingReport.discussion || '');
       setNextFollowUpDate(existingReport.followUpDate || getIndianDateString(new Date(Date.now() + 86400000 * 3)));
+      setAttachmentFiles([]);
+      setExistingAttachmentUrls(existingReport.attachmentUrls || '');
     } else {
       setActivePlan(null);
       setUid(defaultUid || 'MP-' + Date.now());
@@ -120,6 +131,8 @@ export const EveningReportModule: React.FC = () => {
       setRemarks('');
       setNextFollowUpDate(getIndianDateString(new Date(Date.now() + 86400000 * 3)));
       setEditingReportId(null);
+      setAttachmentFiles([]);
+      setExistingAttachmentUrls('');
     }
     setShowModal(true);
   };
@@ -167,6 +180,22 @@ export const EveningReportModule: React.FC = () => {
 
     setIsSubmitting(true);
 
+    // Upload any newly selected attachments to Drive before saving the report
+    let uploadedUrls: string[] = [];
+    if (attachmentFiles.length > 0) {
+      setIsUploadingAttachments(true);
+      const results = await Promise.all(
+        attachmentFiles.map(file => uploadFileToDrive(file, EVENING_ATTACHMENT_FOLDER_ID))
+      );
+      setIsUploadingAttachments(false);
+
+      uploadedUrls = results.filter((url): url is string => !!url);
+      if (uploadedUrls.length < attachmentFiles.length) {
+        showToast('warning', 'Some Attachments Failed', `${attachmentFiles.length - uploadedUrls.length} of ${attachmentFiles.length} file(s) could not be uploaded.`);
+      }
+    }
+    const attachmentUrls = [existingAttachmentUrls, ...uploadedUrls].filter(Boolean).join(', ');
+
     // Capture GPS coordinates for visit check-in
     const gpsRec = await captureGPSLocation('Evening Follow Up Submission');
 
@@ -187,6 +216,7 @@ export const EveningReportModule: React.FC = () => {
       status: 'Completed',
       latitude: gpsRec?.latitude,
       longitude: gpsRec?.longitude,
+      attachmentUrls,
     };
 
     try {
@@ -787,6 +817,63 @@ export const EveningReportModule: React.FC = () => {
                     onChange={(e) => setNextFollowUpDate(convertInputDateToDDMMYYYY(e.target.value))}
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sky-600 font-semibold"
                   />
+                </div>
+
+                {/* 7. Attachments */}
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Attachments</label>
+
+                  {existingAttachmentUrls && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {existingAttachmentUrls.split(',').map(u => u.trim()).filter(Boolean).map((url, idx) => (
+                        <a
+                          key={`existing-att-${idx}`}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] px-2 py-1 rounded-lg bg-sky-950/60 text-sky-400 border border-sky-800/60 flex items-center gap-1"
+                        >
+                          <Paperclip className="w-3 h-3" />
+                          <span>Attachment {idx + 1}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-2 p-2.5 bg-slate-950 border border-dashed border-slate-700 rounded-xl text-slate-400 cursor-pointer hover:border-sky-500 transition-colors">
+                    <Paperclip className="w-4 h-4 shrink-0" />
+                    <span className="text-xs">Click to add file(s)</span>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        const files = e.target.files ? Array.from(e.target.files) : [];
+                        setAttachmentFiles(prev => [...prev, ...files]);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {attachmentFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {attachmentFiles.map((file, idx) => (
+                        <span
+                          key={`new-att-${idx}-${file.name}`}
+                          className="text-[11px] px-2 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5"
+                        >
+                          <span className="truncate max-w-[140px]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setAttachmentFiles(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-slate-500 hover:text-rose-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit button */}

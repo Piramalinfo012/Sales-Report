@@ -59,6 +59,7 @@ export interface EveningReport {
   orderProbability?: number; // percentage
   remarks: string;
   photoUrl?: string;
+  attachmentUrls?: string;
   latitude?: number;
   longitude?: number;
   status: 'Completed' | 'Pending';
