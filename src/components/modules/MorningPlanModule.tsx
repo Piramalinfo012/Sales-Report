@@ -24,7 +24,8 @@ import {
   ChevronRight,
   ExternalLink,
   Clock,
-  Briefcase
+  Briefcase,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -43,7 +44,7 @@ interface SalesPersonSummaryGroup {
 }
 
 export const MorningPlanModule: React.FC = () => {
-  const { authState, morningPlans, addMorningPlan, refreshMorningPlans, captureGPSLocation, showToast } = useAuth();
+  const { authState, morningPlans, addMorningPlan, updateMorningPlan, deleteMorningPlan, refreshMorningPlans, captureGPSLocation, showToast } = useAuth();
   const user = authState.user;
 
   const [showModal, setShowModal] = useState(false);
@@ -57,6 +58,9 @@ export const MorningPlanModule: React.FC = () => {
 
   // Modal for inspecting details of a specific Sales Person's plan
   const [selectedGroupDetails, setSelectedGroupDetails] = useState<SalesPersonSummaryGroup | null>(null);
+
+  // Edit Plan State
+  const [editingPlan, setEditingPlan] = useState<MorningPlan | null>(null);
 
   // Form fields matching Google Sheet 'Morning Follow Up' (Uid, Date, Sales Person Name, Company Name, Address, Remark)
   const [salesPersonName, setSalesPersonName] = useState(user?.userName || 'Atul Baghmar');
@@ -171,6 +175,48 @@ export const MorningPlanModule: React.FC = () => {
       showToast('error', 'Submission Failed', err.message || 'Could not save Morning Plan.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlan) return;
+    setIsSubmitting(true);
+    try {
+      updateMorningPlan(editingPlan);
+      showToast('success', 'Plan Updated', 'Morning plan has been updated successfully.');
+      setEditingPlan(null);
+      // Also update selectedGroupDetails if it's open
+      if (selectedGroupDetails) {
+        setSelectedGroupDetails(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            plans: prev.plans.map(p => p.id === editingPlan.id ? editingPlan : p)
+          };
+        });
+      }
+    } catch (err: any) {
+      showToast('error', 'Update Failed', err.message || 'Could not update plan.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeletePlan = (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this plan?')) return;
+    deleteMorningPlan(id);
+    showToast('success', 'Plan Deleted', 'Plan has been removed.');
+    if (selectedGroupDetails) {
+      setSelectedGroupDetails(prev => {
+        if (!prev) return prev;
+        const newPlans = prev.plans.filter(p => p.id !== id);
+        return {
+          ...prev,
+          companyCount: newPlans.length,
+          plans: newPlans
+        };
+      });
     }
   };
 
@@ -492,10 +538,20 @@ export const MorningPlanModule: React.FC = () => {
                       {plan.partyName}
                     </h3>
                   </div>
-                  <span className="text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <User className="w-3 h-3 text-amber-400" />
-                    {plan.salesPersonName}
-                  </span>
+                  <div className="flex flex-col gap-2 items-end">
+                    <span className="text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <User className="w-3 h-3 text-amber-400" />
+                      {plan.salesPersonName}
+                    </span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingPlan(plan)} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer" title="Edit">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDeletePlan(plan.id)} className="p-1.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors cursor-pointer" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-xs text-slate-300">
@@ -776,9 +832,17 @@ export const MorningPlanModule: React.FC = () => {
                           </span>
                           <h4 className="font-bold text-sm text-white">{plan.partyName}</h4>
                         </div>
-                        <span className="text-[10px] font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                          {plan.id}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                            {plan.id}
+                          </span>
+                          <button onClick={(e) => { e.stopPropagation(); setEditingPlan(plan); }} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors cursor-pointer" title="Edit">
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeletePlan(plan.id); }} className="p-1.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 rounded-md transition-colors cursor-pointer" title="Delete">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
 
                       {plan.address && (
@@ -832,6 +896,86 @@ export const MorningPlanModule: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* EDIT PLAN MODAL */}
+      <AnimatePresence>
+        {editingPlan && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                    <Edit2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Edit Plan</h2>
+                    <p className="text-[11px] font-mono text-slate-500 mt-0.5">{editingPlan.id}</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingPlan(null)} className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Company Name <span className="text-rose-400">*</span></label>
+                  <input
+                    type="text"
+                    value={editingPlan.partyName}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, partyName: e.target.value })}
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-amber-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Meeting Date (DD-MM-YYYY) <span className="text-rose-400">*</span></label>
+                  <input
+                    type="date"
+                    value={convertDDMMYYYYToInputDate(editingPlan.meetingDate)}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, meetingDate: convertInputDateToDDMMYYYY(e.target.value) })}
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-amber-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">City / Location</label>
+                  <input
+                    type="text"
+                    value={editingPlan.city}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, city: e.target.value })}
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Remarks</label>
+                  <textarea
+                    value={editingPlan.remarks}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, remarks: e.target.value })}
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-amber-500 focus:outline-none min-h-[80px]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button type="button" onClick={() => setEditingPlan(null)} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-all disabled:opacity-50">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

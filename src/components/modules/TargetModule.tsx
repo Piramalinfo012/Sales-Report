@@ -19,8 +19,12 @@ import {
   MessageSquare,
   Package,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Edit2,
+  Trash2,
+  X
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const formatMonthDisplay = (val: any): string => {
   if (!val) return 'July 2026';
@@ -112,6 +116,10 @@ export const TargetModule: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonthFilter, setSelectedMonthFilter] = useState('All');
 
+  // Edit Target State
+  const [editingTarget, setEditingTarget] = useState<TargetRecord | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Fetch real targets and sales persons on mount
   const loadTargets = async () => {
     setLoading(true);
@@ -169,6 +177,27 @@ export const TargetModule: React.FC = () => {
     } finally {
       setIsAssigning(false);
     }
+  };
+
+  const handleUpdateTarget = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTarget) return;
+    setIsUpdating(true);
+    try {
+      setTargets(prev => prev.map(t => (t.id === editingTarget.id ? editingTarget : t)));
+      showToast('success', 'Target Updated', 'The target record has been updated.');
+      setEditingTarget(null);
+    } catch (err: any) {
+      showToast('error', 'Update Failed', err.message || 'Could not update target.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteTarget = (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this target record?')) return;
+    setTargets(prev => prev.filter(t => t.id !== id));
+    showToast('success', 'Target Deleted', 'The target record has been removed.');
   };
 
   // Filter targets
@@ -479,7 +508,8 @@ export const TargetModule: React.FC = () => {
                 <th className="p-3">Sales Person Name</th>
                 <th className="p-3">Target Progress</th>
                 <th className="p-3 text-right">Amount (₹)</th>
-                <th className="p-3 rounded-r-xl">Remark</th>
+                <th className="p-3">Remark</th>
+                <th className="p-3 rounded-r-xl text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -521,6 +551,16 @@ export const TargetModule: React.FC = () => {
                       ₹{(t.amount || 0).toLocaleString('en-IN')}
                     </td>
                     <td className="p-3 text-slate-400 max-w-xs truncate">{t.remark || '-'}</td>
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setEditingTarget(t)} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer" title="Edit">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDeleteTarget(t.id)} className="p-1.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors cursor-pointer" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -528,6 +568,105 @@ export const TargetModule: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* EDIT TARGET MODAL */}
+      <AnimatePresence>
+        {editingTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 my-8"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                    <Edit2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Edit Target</h2>
+                    <p className="text-[11px] font-mono text-slate-500 mt-0.5">{editingTarget.id}</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingTarget(null)} className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateTarget} className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Sales Person Name <span className="text-rose-400">*</span></label>
+                    <select
+                      value={editingTarget.salesPersonName}
+                      onChange={(e) => setEditingTarget({ ...editingTarget, salesPersonName: e.target.value })}
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none appearance-none"
+                      required
+                    >
+                      {salesPersonsList.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Month <span className="text-rose-400">*</span></label>
+                    <input
+                      type="text"
+                      value={editingTarget.month}
+                      onChange={(e) => setEditingTarget({ ...editingTarget, month: e.target.value })}
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Target Orders (Qty) <span className="text-rose-400">*</span></label>
+                    <input
+                      type="number"
+                      value={editingTarget.totalNewOrders}
+                      onChange={(e) => setEditingTarget({ ...editingTarget, totalNewOrders: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Target Amount (₹) <span className="text-rose-400">*</span></label>
+                    <input
+                      type="number"
+                      value={editingTarget.amount}
+                      onChange={(e) => setEditingTarget({ ...editingTarget, amount: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Remark</label>
+                  <input
+                    type="text"
+                    value={editingTarget.remark}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, remark: e.target.value })}
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button type="button" onClick={() => setEditingTarget(null)} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isUpdating} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all disabled:opacity-50">
+                    {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

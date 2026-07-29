@@ -22,7 +22,8 @@ import {
   Clock,
   User,
   ChevronRight,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -49,7 +50,7 @@ interface SalesPersonGroup {
 }
 
 export const EveningReportModule: React.FC = () => {
-  const { authState, eveningReports, addEveningReport, morningPlans, captureGPSLocation, showToast } = useAuth();
+  const { authState, eveningReports, addEveningReport, updateEveningReport, deleteEveningReport, morningPlans, captureGPSLocation, showToast } = useAuth();
   const user = authState.user;
 
   const [showModal, setShowModal] = useState(false);
@@ -60,6 +61,7 @@ export const EveningReportModule: React.FC = () => {
 
   // Active item being updated
   const [activePlan, setActivePlan] = useState<MorningPlan | null>(null);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
 
   // Form states matching 10 Google Sheet columns:
   // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date
@@ -90,9 +92,11 @@ export const EveningReportModule: React.FC = () => {
       setDesignation(existingReport?.designation || '');
       setRemarks(existingReport?.remarks || existingReport?.discussion || plan.remarks || '');
       setNextFollowUpDate(existingReport?.followUpDate || getIndianDateString(new Date(Date.now() + 86400000 * 3)));
+      setEditingReportId(existingReport?.id || null);
     } else if (existingReport) {
       setActivePlan(null);
       setUid(existingReport.morningPlanId || existingReport.id);
+      setEditingReportId(existingReport.id);
       setReportDate(existingReport.meetingDate || getIndianDateString());
       setSalesPersonName(existingReport.salesPersonName || user?.userName || 'Sales Exec');
       setPartyName(existingReport.partyName);
@@ -114,8 +118,39 @@ export const EveningReportModule: React.FC = () => {
       setDesignation('');
       setRemarks('');
       setNextFollowUpDate(getIndianDateString(new Date(Date.now() + 86400000 * 3)));
+      setEditingReportId(null);
     }
     setShowModal(true);
+  };
+
+  const handleDeleteReport = (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this Evening Report?')) return;
+    deleteEveningReport(id);
+    showToast('success', 'Report Deleted', 'The evening report has been removed.');
+    if (selectedGroupDetails) {
+      setSelectedGroupDetails(prev => {
+        if (!prev) return null;
+        const updatedItems = prev.items.map(item => {
+          if (item.reportObj && item.reportObj.id === id) {
+            return {
+              ...item,
+              isUpdated: false,
+              reportObj: undefined,
+              client: item.planObj?.contactPerson || '',
+              contactNumber: item.planObj?.mobileNumber || '',
+              remarks: item.planObj?.remarks || '',
+              nextFollowUpDate: ''
+            };
+          }
+          return item;
+        });
+        return {
+          ...prev,
+          completedCount: updatedItems.filter(i => i.isUpdated).length,
+          items: updatedItems
+        };
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,9 +185,16 @@ export const EveningReportModule: React.FC = () => {
     };
 
     try {
-      const createdReport = await submitEveningReportToSheet(reportData);
-      addEveningReport(createdReport);
-      showToast('success', 'Evening Follow Up Saved', `Data for ${partyName} saved successfully.`);
+      let createdReport;
+      if (editingReportId) {
+        createdReport = { ...reportData, id: editingReportId, submittedAt: getIndianDateString() } as EveningReport;
+        updateEveningReport(createdReport);
+        showToast('success', 'Follow Up Updated', `Data for ${partyName} updated successfully.`);
+      } else {
+        createdReport = await submitEveningReportToSheet(reportData);
+        addEveningReport(createdReport);
+        showToast('success', 'Evening Follow Up Saved', `Data for ${partyName} saved successfully.`);
+      }
 
       setShowModal(false);
       
@@ -535,6 +577,15 @@ export const EveningReportModule: React.FC = () => {
                             <Edit3 className="w-3.5 h-3.5" />
                             <span>{item.isUpdated ? 'Edit Update' : 'Update'}</span>
                           </button>
+                          {item.isUpdated && item.reportObj && (
+                            <button
+                              onClick={() => handleDeleteReport(item.reportObj!.id)}
+                              className="px-2.5 py-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 font-bold shadow-md flex items-center justify-center cursor-pointer transition-colors"
+                              title="Delete Report"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
 

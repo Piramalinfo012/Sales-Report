@@ -140,6 +140,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
           <span>Logout</span>
         </button>
+
+        <div className="pt-2 text-[9px] text-center text-slate-500 font-mono tracking-wider font-semibold">
+          DEVELOPED BY DEEPAK SAHU
+        </div>
       </div>
     </div>
   );

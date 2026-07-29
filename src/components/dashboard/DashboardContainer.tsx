@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { Header } from '../common/Header';
 import { Sidebar } from '../common/Sidebar';
@@ -82,7 +83,7 @@ export const DashboardContainer: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row selection:bg-sky-500 selection:text-white">
+    <div className="h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 flex flex-col lg:flex-row selection:bg-sky-500 selection:text-white">
       {/* Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
@@ -99,9 +100,50 @@ export const DashboardContainer: React.FC = () => {
           toggleSidebarMobile={() => setIsOpenMobileSidebar(!isOpenMobileSidebar)}
         />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {renderActiveModule()}
-        </main>
+        <div className="flex-1 overflow-y-auto relative">
+          <main className="p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-12">
+            {renderActiveModule()}
+          </main>
+        </div>
+
+        <footer className="w-full shrink-0 border-t border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/90 backdrop-blur-md py-3 z-10">
+          <div className="max-w-7xl mx-auto px-4 flex justify-center items-center overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0 
+              }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="flex items-center gap-2"
+            >
+              <motion.div
+                animate={{ 
+                  opacity: [0.5, 1, 0.5],
+                  y: [0, -2, 0],
+                  textShadow: [
+                    "0px 0px 0px rgba(79,70,229,0)",
+                    "0px 0px 12px rgba(79,70,229,0.6)",
+                    "0px 0px 0px rgba(79,70,229,0)"
+                  ]
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="flex items-center gap-2 font-mono text-xs sm:text-sm tracking-[0.15em] font-extrabold text-indigo-600 dark:text-indigo-400"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600 dark:bg-indigo-500"></span>
+                </span>
+                <span>DEVELOPED BY DEEPAK SAHU</span>
+                <span className="text-indigo-400 font-bold ml-1">|</span>
+              </motion.div>
+            </motion.div>
+          </div>
+        </footer>
       </div>
     </div>
   );
