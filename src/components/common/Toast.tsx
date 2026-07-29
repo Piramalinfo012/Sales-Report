@@ -35,7 +35,7 @@ export const ToastContainer: React.FC = () => {
                 {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
                 {isError && <AlertCircle className="w-5 h-5 text-rose-400" />}
                 {isWarning && <AlertTriangle className="w-5 h-5 text-amber-400" />}
-                {!isSuccess && !isError && !isWarning && <Info className="w-5 h-5 text-sky-400" />}
+                {!isSuccess && !isError && !isWarning && <Info className="w-5 h-5 text-sky-600" />}
               </div>
 
               <div className="flex-1">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ReferenceRecord } from '../../types';
 import { submitReferenceToSheet, fetchSalesPersonsFromLoginSheet } from '../../services/api';
-import { getIndianDateString } from '../../utils/dateUtils';
+import { getIndianDateString, convertInputDateToDDMMYYYY, convertDDMMYYYYToInputDate } from '../../utils/dateUtils';
 import {
   UserPlus,
   Search,
@@ -204,7 +204,7 @@ export const ReferencesModule: React.FC = () => {
             disabled={isRefreshing}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-800 transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-600 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Sync Records</span>
           </button>
 
@@ -230,7 +230,7 @@ export const ReferencesModule: React.FC = () => {
         <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
           <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-sky-400 to-blue-500" />
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-2">Filtered Count</p>
-          <p className="text-2xl font-black text-sky-400 pl-2 tabular-nums">{filteredReferences.length}</p>
+          <p className="text-2xl font-black text-sky-600 pl-2 tabular-nums">{filteredReferences.length}</p>
         </div>
         <div className="group relative overflow-hidden p-5 bg-slate-900 border border-slate-800 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 space-y-1">
           <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-indigo-400 to-purple-500" />
@@ -283,7 +283,7 @@ export const ReferencesModule: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all cursor-pointer"
             title="Export filtered records to CSV"
           >
-            <Download className="w-3.5 h-3.5 text-sky-400" />
+            <Download className="w-3.5 h-3.5 text-sky-600" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -293,7 +293,7 @@ export const ReferencesModule: React.FC = () => {
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <h2 className="font-bold text-base text-white flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-sky-400" />
+            <FileSpreadsheet className="w-4 h-4 text-sky-600" />
             <span>References Master Sheet ({filteredReferences.length})</span>
           </h2>
         </div>
@@ -354,7 +354,7 @@ export const ReferencesModule: React.FC = () => {
 
                     {/* 3) Allotted To Sales Person Name */}
                     <td className="p-3">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-950 text-sky-300 border border-sky-800/60 font-semibold text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-950 text-sky-600 border border-sky-800/60 font-semibold text-[11px]">
                         <UserCheck className="w-3 h-3" />
                         {ref.allottedToSalesPersonName || '-'}
                       </span>
@@ -380,7 +380,7 @@ export const ReferencesModule: React.FC = () => {
                       {ref.clientNumber && (
                         <a
                           href={`tel:${ref.clientNumber}`}
-                          className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline font-mono"
+                          className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:underline font-mono"
                         >
                           <Phone className="w-3 h-3" />
                           <span>{ref.clientNumber}</span>
@@ -408,7 +408,7 @@ export const ReferencesModule: React.FC = () => {
                     <td className="p-3 text-center">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-800/80 font-mono font-semibold text-[11px]">
                         <Calendar className="w-3 h-3 text-amber-400" />
-                        {ref.nextFollowupDate || '-'}
+                        {ref.nextFollowupDate ? convertInputDateToDDMMYYYY(ref.nextFollowupDate) : '-'}
                       </span>
                     </td>
                   </tr>
@@ -603,8 +603,8 @@ export const ReferencesModule: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={nextFollowupDate}
-                    onChange={e => setNextFollowupDate(e.target.value)}
+                    value={convertDDMMYYYYToInputDate(nextFollowupDate)}
+                    onChange={e => setNextFollowupDate(convertInputDateToDDMMYYYY(e.target.value))}
                     className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-sky-500 font-mono"
                   />
                 </div>

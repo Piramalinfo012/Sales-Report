@@ -107,7 +107,7 @@ export const AnalyticsModule: React.FC = () => {
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-white flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-sky-400" />
+              <BarChart3 className="w-4 h-4 text-sky-600" />
               <span>City-Wise Target vs Actual (Bar Chart)</span>
             </h3>
           </div>

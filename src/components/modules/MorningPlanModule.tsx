@@ -359,9 +359,9 @@ export const MorningPlanModule: React.FC = () => {
           <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-sky-400 to-blue-500" />
           <div className="pl-2">
             <p className="text-xs font-medium text-slate-400">Active Sales Executives</p>
-            <p className="text-3xl font-black text-sky-400 mt-1 tabular-nums">{groupedBySalesPerson.length}</p>
+            <p className="text-3xl font-black text-sky-600 mt-1 tabular-nums">{groupedBySalesPerson.length}</p>
           </div>
-          <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-400 transition-transform group-hover:scale-110">
+          <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-600 transition-transform group-hover:scale-110">
             <Users className="w-6 h-6" />
           </div>
         </div>

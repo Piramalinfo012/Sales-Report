@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet } from '../../services/api';
-import { TargetRecord } from '../../types';
+import { fetchTargetsFromSheet, assignTargetToSheet, fetchSalesPersonsFromLoginSheet, fetchCRMOrdersFromSheet } from '../../services/api';
+import { TargetRecord, CRMOrderRecord } from '../../types';
 import { getIndianDateTimeString } from '../../utils/dateUtils';
 import {
   Target,
@@ -33,7 +33,7 @@ export const formatMonthDisplay = (val: any): string => {
   }
 
   // If ISO date string or YYYY-MM date (e.g. "2026-06-30T18:30:00.000Z")
-  if (str.includes('T') || (str.includes('-') && str.length >= 7)) {
+  if (str.includes('T') || (str.includes('-') && str.length >= 7 && str.startsWith('202'))) {
     const d = new Date(str);
     if (!isNaN(d.getTime())) {
       const monthNames = [
@@ -44,6 +44,18 @@ export const formatMonthDisplay = (val: any): string => {
       const localDate = new Date(d.getTime() + (5.5 * 3600 * 1000));
       return `${monthNames[localDate.getUTCMonth()]} ${localDate.getUTCFullYear()}`;
     }
+  }
+
+  // Parse DD/MM/YYYY or DD-MM-YYYY
+  const dmMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dmMatch) {
+    const month = parseInt(dmMatch[2], 10) - 1;
+    const year = dmMatch[3];
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return `${monthNames[month]} ${year}`;
   }
 
   // If numeric Excel date serial
@@ -68,6 +80,7 @@ export const TargetModule: React.FC = () => {
 
   // Real data state from Google Sheet
   const [targets, setTargets] = useState<TargetRecord[]>([]);
+  const [crmOrders, setCrmOrders] = useState<CRMOrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Salespersons list fetched from Login sheet Column C (USER NAME)
@@ -103,8 +116,12 @@ export const TargetModule: React.FC = () => {
   const loadTargets = async () => {
     setLoading(true);
     try {
-      const data = await fetchTargetsFromSheet();
-      setTargets(data);
+      const [targetsData, crmOrdersData] = await Promise.all([
+        fetchTargetsFromSheet(),
+        fetchCRMOrdersFromSheet()
+      ]);
+      setTargets(targetsData);
+      setCrmOrders(crmOrdersData);
     } catch (err) {
       console.error('Failed to load targets:', err);
     } finally {
@@ -171,12 +188,33 @@ export const TargetModule: React.FC = () => {
     return matchesSearch && matchesMonth;
   });
 
+  // Helper to calculate achieved orders for a target
+  const getAchievedCount = (target: TargetRecord): number => {
+    const targetMonth = formatMonthDisplay(target.month);
+    return crmOrders.filter(order => {
+      // 1. Match Sales Person Name
+      const isSamePerson = order.salesPersonName.trim().toLowerCase() === target.salesPersonName.trim().toLowerCase();
+      if (!isSamePerson) return false;
+
+      // 2. Order status must be 'Recieved' (checking both spellings just in case)
+      const statusLower = (order.orderStatus || '').toLowerCase();
+      const isReceived = statusLower.includes('recieved') || statusLower.includes('received');
+      if (!isReceived) return false;
+
+      // 3. Order Actual Date's month must strictly match Target Month
+      const orderMonth = formatMonthDisplay(order.orderActualDate);
+      return orderMonth === targetMonth;
+    }).length;
+  };
+
   // Calculate total targets summary
   const totalAssignedAmount = targets.reduce((sum, t) => sum + (t.amount || 0), 0);
   const totalAssignedOrders = targets.reduce((sum, t) => sum + (t.totalNewOrders || 0), 0);
+  const totalAchievedOrders = targets.reduce((sum, t) => sum + getAchievedCount(t), 0);
 
   // User-specific target
   const userTarget = targets.find(t => t.salesPersonName.toLowerCase().includes((user?.userName || '').toLowerCase())) || targets[0];
+  const userAchievedOrders = userTarget ? getAchievedCount(userTarget) : 0;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -204,7 +242,7 @@ export const TargetModule: React.FC = () => {
           disabled={loading}
           className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all shrink-0"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 text-sky-600 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Targets</span>
         </button>
       </div>
@@ -225,29 +263,58 @@ export const TargetModule: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Total New Orders Quota</span>
-            <Package className="w-4 h-4 text-sky-400" />
+            <span>Total New Orders Progress</span>
+            <Package className="w-4 h-4 text-sky-600" />
           </div>
-          <div className="text-2xl font-black text-sky-400 font-mono">
-            {totalAssignedOrders} Orders
-          </div>
-          <div className="text-[11px] text-slate-400">
-            Target new order count expected
+          <div>
+            <div className="flex items-end justify-between mb-2">
+              <div className="text-2xl font-black text-sky-600 font-mono">
+                {totalAchievedOrders} <span className="text-sm text-slate-500 font-medium">/ {totalAssignedOrders}</span>
+              </div>
+              <div className="text-xs font-bold text-emerald-400">
+                {totalAssignedOrders > 0 ? Math.round((totalAchievedOrders / totalAssignedOrders) * 100) : 0}%
+              </div>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-sky-500 to-emerald-400 h-full rounded-full transition-all duration-1000 relative" 
+                style={{ width: `${totalAssignedOrders > 0 ? Math.min((totalAchievedOrders / totalAssignedOrders) * 100, 100) : 0}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span>My Active Monthly Target</span>
             <Award className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl font-black text-amber-400 font-mono">
-            ₹{(userTarget?.amount || 500000).toLocaleString('en-IN')}
-          </div>
-          <div className="text-[11px] text-slate-300 truncate">
-            {formatMonthDisplay(userTarget?.month)} • {userTarget?.totalNewOrders || 10} Orders Goal
+          <div>
+            <div className="text-2xl font-black text-amber-400 font-mono mb-1">
+              ₹{(userTarget?.amount || 500000).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[11px] text-slate-300 truncate mb-3">
+              {formatMonthDisplay(userTarget?.month)}
+            </div>
+            
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400">
+                <span>Orders Progress</span>
+                <span className="text-amber-400">
+                  {userAchievedOrders} / {userTarget?.totalNewOrders || 10}
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  className="bg-amber-400 h-full rounded-full transition-all duration-1000 relative" 
+                  style={{ width: `${(userTarget?.totalNewOrders || 10) > 0 ? Math.min((userAchievedOrders / (userTarget?.totalNewOrders || 10)) * 100, 100) : 0}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -372,7 +439,7 @@ export const TargetModule: React.FC = () => {
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-sky-400" />
+            <Layers className="w-5 h-5 text-sky-600" />
             <h2 className="font-bold text-base text-white">Target Records ({filteredTargets.length})</h2>
           </div>
 
@@ -410,7 +477,7 @@ export const TargetModule: React.FC = () => {
                 <th className="p-3">Timestamp</th>
                 <th className="p-3">Month</th>
                 <th className="p-3">Sales Person Name</th>
-                <th className="p-3 text-right">Total New Orders</th>
+                <th className="p-3">Target Progress</th>
                 <th className="p-3 text-right">Amount (₹)</th>
                 <th className="p-3 rounded-r-xl">Remark</th>
               </tr>
@@ -419,7 +486,7 @@ export const TargetModule: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-400" />
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-600" />
                     <span>Fetching target records...</span>
                   </td>
                 </tr>
@@ -432,12 +499,23 @@ export const TargetModule: React.FC = () => {
               ) : (
                 filteredTargets.map((t, idx) => (
                   <tr key={t.id || idx} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-3 font-mono text-sky-400 font-semibold">{t.id}</td>
+                    <td className="p-3 font-mono text-sky-600 font-semibold">{t.id}</td>
                     <td className="p-3 text-slate-400 text-[11px]">{getIndianDateTimeString(t.timestamp)}</td>
                     <td className="p-3 font-semibold text-slate-200">{formatMonthDisplay(t.month)}</td>
                     <td className="p-3 font-medium text-white">{t.salesPersonName}</td>
-                    <td className="p-3 text-right font-mono text-sky-300 font-bold">
-                      {t.totalNewOrders}
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1.5 min-w-[120px]">
+                        <div className="flex items-center justify-between text-[11px] font-bold font-mono">
+                          <span className="text-emerald-400">{getAchievedCount(t)} Achieved</span>
+                          <span className="text-slate-500">/ {t.totalNewOrders}</span>
+                        </div>
+                        <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-1000" 
+                            style={{ width: `${t.totalNewOrders > 0 ? Math.min((getAchievedCount(t) / t.totalNewOrders) * 100, 100) : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
                     </td>
                     <td className="p-3 text-right font-mono text-emerald-400 font-black">
                       ₹{(t.amount || 0).toLocaleString('en-IN')}

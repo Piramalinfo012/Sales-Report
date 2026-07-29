@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
       desc: 'You have pending client follow-ups due today',
       time: '11:30 AM',
       icon: AlertCircle,
-      color: 'text-sky-400 bg-sky-950/40 border-sky-800/40',
+      color: 'text-sky-600 bg-sky-950/40 border-sky-800/40',
     },
     {
       id: 3,
@@ -145,10 +145,10 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
               >
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <h3 className="font-semibold text-sm text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-sky-400" />
+                    <Sparkles className="w-4 h-4 text-sky-600" />
                     <span>Daily System Reminders</span>
                   </h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-600 border border-sky-800">
                     {leaveNotifications.length + sampleNotifications.length} Active
                   </span>
                 </div>
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
               <div className="text-xs font-semibold text-white truncate max-w-[120px]">
                 {user?.userName || 'User'}
               </div>
-              <div className="text-[10px] text-sky-400 font-medium mt-0.5">
+              <div className="text-[10px] text-sky-600 font-medium mt-0.5">
                 {user?.role || 'Sales'}
               </div>
             </div>
@@ -217,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
                   <div className="overflow-hidden">
                     <h4 className="font-semibold text-sm text-white truncate">{user?.userName}</h4>
                     <p className="text-xs text-slate-400 truncate">ID: {user?.id}</p>
-                    <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800/60 font-medium">
+                    <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-600 border border-sky-800/60 font-medium">
                       Manager: {user?.manager}
                     </span>
                   </div>
@@ -231,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
                   >
-                    <User className="w-4 h-4 text-sky-400" />
+                    <User className="w-4 h-4 text-sky-600" />
                     <span>My Profile & Security</span>
                   </button>
 

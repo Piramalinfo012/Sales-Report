@@ -148,7 +148,7 @@ export const ReportsModule: React.FC = () => {
 
           <button
             onClick={exportToCSV}
-            className="px-3.5 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-600 text-xs font-semibold flex items-center gap-1.5 transition-all"
             title="Export as CSV File"
           >
             <FileCode className="w-4 h-4" />
@@ -219,7 +219,7 @@ export const ReportsModule: React.FC = () => {
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm text-white flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-sky-400" />
+            <FileSpreadsheet className="w-4 h-4 text-sky-600" />
             <span>Master Sales Log ({filteredData.length} Records)</span>
           </h2>
         </div>

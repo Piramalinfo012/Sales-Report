@@ -107,7 +107,7 @@ export const CustomersModule: React.FC = () => {
                 <span>Contact: {cust.contactPerson}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <Phone className="w-3.5 h-3.5 text-sky-600 shrink-0" />
                 <span>{cust.mobileNumber}</span>
               </div>
               <div className="flex items-center gap-2">

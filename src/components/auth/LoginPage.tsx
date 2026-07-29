@@ -131,7 +131,7 @@ export const LoginPage: React.FC = () => {
               className="absolute inset-0 rounded-2xl bg-sky-500/40 blur-xl"
             />
             <div className="relative w-full h-full bg-slate-950 rounded-[0.85rem] flex items-center justify-center transition-transform group-hover:scale-95 duration-300">
-              <Building2 className="w-8 h-8 text-sky-400" />
+              <Building2 className="w-8 h-8 text-sky-600" />
             </div>
           </motion.div>
 
@@ -139,7 +139,7 @@ export const LoginPage: React.FC = () => {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/40 text-sky-400 text-xs font-medium mb-3"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/40 text-sky-600 text-xs font-medium mb-3"
           >
             <motion.span
               animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.2, 1] }}
@@ -180,7 +180,7 @@ export const LoginPage: React.FC = () => {
               User ID / Employee ID
             </label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-400 transition-colors">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-600 transition-colors">
                 <User className="w-5 h-5" />
               </div>
               <input
@@ -204,7 +204,7 @@ export const LoginPage: React.FC = () => {
               Password
             </label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-400 transition-colors">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-600 transition-colors">
                 <Lock className="w-5 h-5" />
               </div>
               <input
@@ -245,7 +245,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotModal(true)}
-              className="text-sky-400 hover:text-sky-300 transition-colors font-medium hover:underline"
+              className="text-sky-600 hover:text-sky-600 transition-colors font-medium hover:underline"
             >
               Forgot Password?
             </button>
@@ -312,7 +312,7 @@ export const LoginPage: React.FC = () => {
               className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full text-slate-200 shadow-2xl relative"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600">
                   <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>

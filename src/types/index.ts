@@ -129,6 +129,12 @@ export interface TargetRecord {
   remark: string;
 }
 
+export interface CRMOrderRecord {
+  salesPersonName: string;
+  orderActualDate: string;
+  orderStatus: string;
+}
+
 export interface ReferenceRecord {
   id: string;
   refGivenBy: string;

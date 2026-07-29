@@ -99,6 +99,7 @@ export const GPSTrackingModule: React.FC = () => {
   const [mobileFilter, setMobileFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
   // Auto Refresh GPS Sheet Data on Mount
   useEffect(() => {
@@ -117,9 +118,13 @@ export const GPSTrackingModule: React.FC = () => {
   };
 
   const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all uploaded Excel GPS records? This action cannot be undone.')) {
+    if (isConfirmingClear) {
       clearGPSExcelRecords();
       showToast('success', 'Data Cleared', 'All Excel uploaded GPS records have been removed from local storage.');
+      setIsConfirmingClear(false);
+    } else {
+      setIsConfirmingClear(true);
+      setTimeout(() => setIsConfirmingClear(false), 3000);
     }
   };
 
@@ -469,10 +474,10 @@ export const GPSTrackingModule: React.FC = () => {
           <button
             onClick={handleRefreshData}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-300 font-bold text-xs transition-all disabled:opacity-60 cursor-pointer shadow-md"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-600 font-bold text-xs transition-all disabled:opacity-60 cursor-pointer shadow-md"
             title="Refresh latest GPS data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-600 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>{isRefreshing ? 'Syncing...' : 'Refresh GPS Data'}</span>
           </button>
 
@@ -481,7 +486,7 @@ export const GPSTrackingModule: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
             title="Download sample Excel format"
           >
-            <Download className="w-3.5 h-3.5 text-sky-400" />
+            <Download className="w-3.5 h-3.5 text-sky-600" />
             <span>Sample Excel</span>
           </button>
 
@@ -496,22 +501,18 @@ export const GPSTrackingModule: React.FC = () => {
           {gpsExcelRecords.length > 0 && (
             <button
               onClick={handleClearData}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs transition-all cursor-pointer shadow-md"
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs transition-all cursor-pointer shadow-md ${
+                isConfirmingClear
+                  ? 'bg-rose-600 hover:bg-rose-500 border-rose-500 text-white animate-pulse'
+                  : 'bg-rose-950/80 hover:bg-rose-900 border-rose-800 text-rose-300'
+              }`}
               title="Clear all Excel uploaded GPS records"
             >
               <XCircle className="w-3.5 h-3.5" />
-              <span>Clear Excel Data</span>
+              <span>{isConfirmingClear ? 'Click again to confirm' : 'Clear Excel Data'}</span>
             </button>
           )}
 
-          <button
-            onClick={handleManualPing}
-            disabled={isCapturing}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs transition-all disabled:opacity-60 cursor-pointer"
-          >
-            <MapPin className={`w-3.5 h-3.5 text-emerald-400 ${isCapturing ? 'animate-spin' : ''}`} />
-            <span>{isCapturing ? 'Capturing...' : 'Live Check-in'}</span>
-          </button>
         </div>
       </div>
 
@@ -534,11 +535,11 @@ export const GPSTrackingModule: React.FC = () => {
             onClick={() => setActiveTab('live')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'live'
-                ? 'bg-sky-950/80 text-sky-300 border border-sky-800/80 shadow-md'
+                ? 'bg-sky-950/80 text-sky-600 border border-sky-800/80 shadow-md'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
-            <Route className="w-4 h-4 text-sky-400" />
+            <Route className="w-4 h-4 text-sky-600" />
             <span>Road Map</span>
           </button>
         </div>
@@ -647,7 +648,7 @@ export const GPSTrackingModule: React.FC = () => {
           {mobileFilter && routeRecords.length > 0 && (
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-emerald-950/40 border border-sky-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-600 shrink-0">
                   <Route className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -659,7 +660,7 @@ export const GPSTrackingModule: React.FC = () => {
                         {' · From '}
                         <span className="text-emerald-400 font-medium">{routeRecords[0].address || 'Start Point'}</span>
                         {' to '}
-                        <span className="text-sky-400 font-medium">{routeRecords[routeRecords.length - 1].address || 'End Point'}</span>
+                        <span className="text-sky-600 font-medium">{routeRecords[routeRecords.length - 1].address || 'End Point'}</span>
                       </>
                     )}
                   </p>
@@ -728,11 +729,11 @@ export const GPSTrackingModule: React.FC = () => {
                         <td className="p-3 text-slate-300">{item.recipientCustomerName || '-'}</td>
                         <td className="p-3 font-bold text-amber-400 whitespace-nowrap">{item.vehicleNumber || '-'}</td>
                         <td className="p-3 text-slate-300">{item.resourceName || '-'}</td>
-                        <td className="p-3 font-mono text-sky-400 whitespace-nowrap">{item.deviceNumber || '-'}</td>
+                        <td className="p-3 font-mono text-sky-600 whitespace-nowrap">{item.deviceNumber || '-'}</td>
                         <td className="p-3 text-slate-300 whitespace-nowrap">{formatExcelDate(item.resultDate)}</td>
                         <td className="p-3 text-slate-300 max-w-[220px] truncate" title={item.address}>{item.address || '-'}</td>
                         <td className="p-3 font-mono text-emerald-400 whitespace-nowrap">{item.latitude || '-'}</td>
-                        <td className="p-3 font-mono text-sky-400 whitespace-nowrap">{item.longitude || '-'}</td>
+                        <td className="p-3 font-mono text-sky-600 whitespace-nowrap">{item.longitude || '-'}</td>
                         <td className="p-3 text-slate-300 whitespace-nowrap">{item.accuracy || '-'}</td>
                         <td className="p-3 text-slate-300 whitespace-nowrap">{item.distance || '-'}</td>
                         <td className="p-3 font-semibold whitespace-nowrap">
@@ -751,7 +752,7 @@ export const GPSTrackingModule: React.FC = () => {
                               href={mapsUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-400 text-[11px] font-semibold transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-600 text-[11px] font-semibold transition-colors"
                             >
                               <span>Map</span>
                               <ExternalLink className="w-3 h-3" />
@@ -861,7 +862,7 @@ export const GPSTrackingModule: React.FC = () => {
                               href={segmentUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 text-sky-400 hover:text-sky-300 text-[10px] font-semibold transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 text-sky-600 hover:text-sky-600 text-[10px] font-semibold transition-colors"
                             >
                               <span>View Route: {i + 1} ➔ {i + 2}</span>
                               <ExternalLink className="w-3 h-3" />
@@ -909,7 +910,7 @@ export const GPSTrackingModule: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-lg text-white">Excel Upload Preview</h3>
                     <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
-                      <FileText className="w-3.5 h-3.5 text-sky-400" />
+                      <FileText className="w-3.5 h-3.5 text-sky-600" />
                       <span>{uploadFileName}</span>
                       <span className="mx-0.5">•</span>
                       <strong className="text-emerald-400">{parsedRows.length} Unique Rows</strong>
@@ -960,11 +961,11 @@ export const GPSTrackingModule: React.FC = () => {
                         <td className="p-3 text-slate-300">{r.recipientCustomerName || '-'}</td>
                         <td className="p-3 font-bold text-amber-400">{r.vehicleNumber || '-'}</td>
                         <td className="p-3 text-slate-300">{r.resourceName || '-'}</td>
-                        <td className="p-3 font-mono text-sky-400">{r.deviceNumber || '-'}</td>
+                        <td className="p-3 font-mono text-sky-600">{r.deviceNumber || '-'}</td>
                         <td className="p-3 text-slate-300">{r.resultDate || '-'}</td>
                         <td className="p-3 text-slate-300 truncate max-w-[150px]">{r.address || '-'}</td>
                         <td className="p-3 font-mono text-emerald-400">{r.latitude || '-'}</td>
-                        <td className="p-3 font-mono text-sky-400">{r.longitude || '-'}</td>
+                        <td className="p-3 font-mono text-sky-600">{r.longitude || '-'}</td>
                         <td className="p-3 font-semibold text-emerald-400">{r.status || '-'}</td>
                       </tr>
                     ))}

@@ -34,14 +34,14 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onNavigate }) =>
       {/* Welcome Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-indigo-950/60 border border-sky-800/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-sky-400">
+          <span className="text-xs font-semibold uppercase tracking-wider text-sky-600">
             Field Officer Portal
           </span>
           <h1 className="text-2xl font-bold text-white tracking-tight mt-1">
             Hello, {user?.userName}
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Manager: <span className="text-white font-medium">{user?.manager}</span> | CRM ID: <span className="font-mono text-sky-300">{user?.crm}</span>
+            Manager: <span className="text-white font-medium">{user?.manager}</span> | CRM ID: <span className="font-mono text-sky-600">{user?.crm}</span>
           </p>
         </div>
 
@@ -88,12 +88,12 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onNavigate }) =>
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-sky-400" />
+            <Calendar className="w-4 h-4 text-sky-600" />
             <span>My Planned Visits</span>
           </h2>
           <button
             onClick={() => onNavigate('morning_plan')}
-            className="text-xs text-sky-400 hover:underline font-medium flex items-center gap-1"
+            className="text-xs text-sky-600 hover:underline font-medium flex items-center gap-1"
           >
             <span>View All</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -119,7 +119,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onNavigate }) =>
                 </span>
                 <button
                   onClick={() => onNavigate('evening_report')}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-semibold"
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-600 text-xs font-semibold"
                 >
                   Log Visit
                 </button>

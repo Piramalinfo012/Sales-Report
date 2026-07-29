@@ -45,7 +45,7 @@ export const UserProfileModule: React.FC = () => {
         />
 
         <div className="text-center sm:text-left flex-1 space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-950 text-sky-400 border border-sky-800 text-xs font-semibold mb-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-950 text-sky-600 border border-sky-800 text-xs font-semibold mb-1">
             <Shield className="w-3.5 h-3.5" />
             <span>{user?.role} Account</span>
           </div>
@@ -55,7 +55,7 @@ export const UserProfileModule: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2">
             <div className="flex items-center gap-2">
-              <Mail className="w-3.5 h-3.5 text-sky-400" />
+              <Mail className="w-3.5 h-3.5 text-sky-600" />
               <span>{user?.gmail || 'user@enterprise.com'}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export const UserProfileModule: React.FC = () => {
       {/* Change Password Form */}
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-          <Key className="w-5 h-5 text-sky-400" />
+          <Key className="w-5 h-5 text-sky-600" />
           <h2 className="font-bold text-base text-white">Change Account Password</h2>
         </div>
 

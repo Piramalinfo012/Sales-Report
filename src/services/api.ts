@@ -1,4 +1,4 @@
-import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord, ReferenceRecord, LeaveRecord } from '../types';
+import { User, MorningPlan, EveningReport, GPSRecord, GPSExcelRecord, AttendanceRecord, TargetRecord, CRMOrderRecord, ReferenceRecord, LeaveRecord } from '../types';
 import { getIndianDateString, getIndianDateTimeString, getIndianTimeString } from '../utils/dateUtils';
 
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhXWGagj_RY-JEkrNaKA2aNjiSlAOJDEYau6Hm7tCfQ4t7Y03aGZBhgkPWfJrslFrdZg/exec';
@@ -757,3 +757,42 @@ export async function fetchLeavesFromSheet(): Promise<LeaveRecord[]> {
   return leaves;
 }
 
+
+
+/**
+ * Fetch CRM Orders for target achievement calculation
+ * Crm New Lead Order Recived tab
+ * Column K (Index 10) - Sales Person Name
+ * Column BI (Index 60) - Order Actual Date
+ */
+export async function fetchCRMOrdersFromSheet(): Promise<CRMOrderRecord[]> {
+  try {
+    const rows = await fetchSheetData('Crm New Lead Order Recived');
+    if (!rows || rows.length <= 1) {
+      return [];
+    }
+
+    const orders: CRMOrderRecord[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+
+      const salesPersonName = String(row[10] || '').trim();
+      const orderActualDate = String(row[60] || '').trim();
+      const orderStatus = String(row[68] || '').trim();
+
+      if (salesPersonName && orderActualDate) {
+        orders.push({
+          salesPersonName,
+          orderActualDate,
+          orderStatus
+        });
+      }
+    }
+
+    return orders;
+  } catch (err) {
+    console.error('Error fetching CRM orders:', err);
+    return [];
+  }
+}

@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'morning_plan', label: 'Morning Follow up', icon: Sun },
     { id: 'evening_report', label: 'Evening Report', icon: Moon },
     { id: 'gps_tracking', label: 'GPS Tracking', icon: Navigation },
-    { id: 'customers', label: 'Customers', icon: Users },
+
     { id: 'references', label: 'References', icon: UserPlus },
     { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 p-0.5 shadow-md shadow-sky-500/20">
             <div className="w-full h-full bg-slate-950 rounded-[0.65rem] flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-sky-400" />
+              <Building2 className="w-5 h-5 text-sky-600" />
             </div>
           </div>
           <div>
@@ -78,12 +78,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Role Badge Pill */}
       <div className="px-5 py-3 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-sky-400" />
+          <ShieldCheck className="w-4 h-4 text-sky-600" />
           <span className="text-xs font-semibold text-slate-300">
             {user?.role === 'Admin' ? 'Administrator' : 'Sales Representative'}
           </span>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800 font-mono">
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-600 border border-sky-800 font-mono">
           {user?.id}
         </span>
       </div>
@@ -103,11 +103,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all ${
                 isActive
-                  ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-300 border border-sky-500/30 shadow-md shadow-sky-950/20 font-semibold'
+                  ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-600 border border-sky-500/30 shadow-md shadow-sky-950/20 font-semibold'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-sky-400' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
               <span>{item.label}</span>
             </button>
           );

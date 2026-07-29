@@ -44,7 +44,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       title: "Today's Visits",
       value: eveningReports.length,
       icon: FileText,
-      color: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+      color: 'text-sky-600 bg-sky-500/10 border-sky-500/30',
       tab: 'evening_report' as NavigationTab,
     },
     {
@@ -81,13 +81,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       icon: Navigation,
       color: 'text-teal-400 bg-teal-500/10 border-teal-500/30',
       tab: 'gps_tracking' as NavigationTab,
-    },
-    {
-      title: 'Sales Person Count',
-      value: totalSalesPersons,
-      icon: Users,
-      color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30',
-      tab: 'customers' as NavigationTab,
     },
   ];
 
@@ -135,7 +128,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       {/* Active Team Today Table */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <h2 className="font-bold text-sm text-white flex items-center gap-2">
-          <Users className="w-4 h-4 text-sky-400" />
+          <Users className="w-4 h-4 text-sky-600" />
           <span>Recent Field Activity Feed</span>
         </h2>
 

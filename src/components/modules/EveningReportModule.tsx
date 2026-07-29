@@ -325,7 +325,7 @@ export const EveningReportModule: React.FC = () => {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-indigo-950/50 border border-sky-800/40 shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-lg shadow-sky-950/40">
+          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-600 shrink-0 shadow-lg shadow-sky-950/40">
             <Moon className="w-6 h-6" />
           </div>
           <div>
@@ -392,11 +392,11 @@ export const EveningReportModule: React.FC = () => {
                 {/* Person Header */}
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-600 font-bold">
                       <User className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-100 group-hover:text-sky-400 transition-colors text-sm">
+                      <h3 className="font-bold text-slate-100 group-hover:text-sky-600 transition-colors text-sm">
                         {group.salesPersonName}
                       </h3>
                       <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
@@ -406,7 +406,7 @@ export const EveningReportModule: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-sky-950/80 text-sky-300 border border-sky-800/60 font-semibold">
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-sky-950/80 text-sky-600 border border-sky-800/60 font-semibold">
                     {group.completedCount} / {group.totalCompanies} Done
                   </span>
                 </div>
@@ -439,7 +439,7 @@ export const EveningReportModule: React.FC = () => {
                 </div>
 
                 {/* Click Footer */}
-                <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-sky-400 font-semibold group-hover:translate-x-1 transition-transform">
+                <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-sky-600 font-semibold group-hover:translate-x-1 transition-transform">
                   <span>Click to view & update companies</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
@@ -461,7 +461,7 @@ export const EveningReportModule: React.FC = () => {
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-600 font-bold">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
@@ -488,7 +488,7 @@ export const EveningReportModule: React.FC = () => {
               {/* Companies List for this Sales Person */}
               <div className="space-y-4">
                 <p className="text-xs text-slate-400">
-                  Select a company below and click <strong className="text-sky-400">Update</strong> to log follow up details.
+                  Select a company below and click <strong className="text-sky-600">Update</strong> to log follow up details.
                 </p>
 
                 <div className="space-y-3">
@@ -499,7 +499,7 @@ export const EveningReportModule: React.FC = () => {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">
+                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-600 border border-sky-800">
                             #{item.uid}
                           </span>
                           <h4 className="font-bold text-amber-400 text-sm">{item.companyName}</h4>
@@ -551,15 +551,15 @@ export const EveningReportModule: React.FC = () => {
                         <div>
                           <span className="text-[10px] text-slate-500 font-medium block">Client / Contact</span>
                           <p className="text-slate-300 font-medium truncate flex items-center gap-1">
-                            <UserCheck className="w-3 h-3 text-sky-400 shrink-0" />
+                            <UserCheck className="w-3 h-3 text-sky-600 shrink-0" />
                             <span>{item.client || 'N/A'} ({item.contactNumber || 'N/A'})</span>
                           </p>
                         </div>
 
                         <div>
                           <span className="text-[10px] text-slate-500 font-medium block">Next Follow Up Date</span>
-                          <p className="text-sky-300 font-semibold flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
+                          <p className="text-sky-600 font-semibold flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-sky-600 shrink-0" />
                             <span>{item.nextFollowUpDate || 'Pending'}</span>
                           </p>
                         </div>
@@ -591,7 +591,7 @@ export const EveningReportModule: React.FC = () => {
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div className="flex items-center gap-2.5">
-                  <Moon className="w-5 h-5 text-sky-400" />
+                  <Moon className="w-5 h-5 text-sky-600" />
                   <h3 className="font-bold text-lg text-white">Update Evening Follow Up</h3>
                 </div>
                 <button
@@ -728,7 +728,7 @@ export const EveningReportModule: React.FC = () => {
                     type="date"
                     value={convertDDMMYYYYToInputDate(nextFollowUpDate)}
                     onChange={(e) => setNextFollowUpDate(convertInputDateToDDMMYYYY(e.target.value))}
-                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sky-300 font-semibold"
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sky-600 font-semibold"
                   />
                 </div>
 
