@@ -24,7 +24,9 @@ import {
   ChevronRight,
   X,
   Trash2,
-  Paperclip
+  Paperclip,
+  UserX,
+  Plane
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -495,19 +497,28 @@ export const EveningReportModule: React.FC = () => {
                     Planned Companies ({group.totalCompanies})
                   </p>
                   <ul className="space-y-1.5">
-                    {group.items.slice(0, 4).map((item, idx) => (
-                      <li key={`preview-${item.uid}-${idx}`} className="flex items-center justify-between text-xs truncate">
-                        <span className="truncate font-medium flex items-center gap-1.5 text-slate-300">
-                          <span className={`w-1.5 h-1.5 rounded-full ${item.isUpdated ? 'bg-emerald-400' : 'bg-amber-400'} shrink-0`}></span>
-                          <span className="truncate">{item.companyName}</span>
-                        </span>
-                        {item.isUpdated ? (
-                          <span className="text-[10px] text-emerald-400 font-semibold shrink-0 ml-2">Updated</span>
-                        ) : (
-                          <span className="text-[10px] text-amber-400 font-semibold shrink-0 ml-2">Pending</span>
-                        )}
-                      </li>
-                    ))}
+                    {group.items.slice(0, 4).map((item, idx) => {
+                      const isLeave = item.companyName === 'On Leave';
+                      const isTravel = item.companyName === 'Travelling';
+                      const dotColor = isLeave ? 'bg-rose-500' : isTravel ? 'bg-purple-500' : item.isUpdated ? 'bg-emerald-400' : 'bg-amber-400';
+                      const nameColor = isLeave ? 'text-rose-400' : isTravel ? 'text-purple-400' : 'text-slate-300';
+                      const statusLabel = isLeave ? 'On Leave' : isTravel ? 'Travelling' : item.isUpdated ? 'Updated' : 'Pending';
+                      const statusColor = isLeave ? 'text-rose-400' : isTravel ? 'text-purple-400' : item.isUpdated ? 'text-emerald-400' : 'text-amber-400';
+                      const rowBg = isLeave
+                        ? 'bg-rose-500/10 border border-rose-500/30'
+                        : isTravel
+                        ? 'bg-purple-500/10 border border-purple-500/30'
+                        : '';
+                      return (
+                        <li key={`preview-${item.uid}-${idx}`} className={`flex items-center justify-between text-xs truncate rounded-lg px-2 py-1 ${rowBg}`}>
+                          <span className={`truncate font-bold flex items-center gap-1.5 ${nameColor}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`}></span>
+                            <span className="truncate">{item.companyName}</span>
+                          </span>
+                          <span className={`text-[10px] font-semibold shrink-0 ml-2 ${statusColor}`}>{statusLabel}</span>
+                        </li>
+                      );
+                    })}
                     {group.items.length > 4 && (
                       <li className="text-[10px] text-slate-500 italic pt-1">
                         + {group.items.length - 4} more companies
@@ -570,21 +581,40 @@ export const EveningReportModule: React.FC = () => {
                 </p>
 
                 <div className="space-y-3">
-                  {selectedGroupDetails.items.map((item, idx) => (
+                  {selectedGroupDetails.items.map((item, idx) => {
+                    const isLeave = item.companyName === 'On Leave';
+                    const isTravel = item.companyName === 'Travelling';
+                    const cardTint = isLeave
+                      ? 'bg-rose-500/10 border-rose-500/30 hover:border-rose-500/50'
+                      : isTravel
+                      ? 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50'
+                      : 'bg-slate-950 border-slate-800 hover:border-slate-700';
+                    const nameColor = isLeave ? 'text-rose-400' : isTravel ? 'text-purple-400' : 'text-amber-400';
+                    return (
                     <div
                       key={`grp-item-${item.uid}-${idx}`}
-                      className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3 hover:border-slate-700 transition-colors"
+                      className={`p-4 border rounded-2xl space-y-3 transition-colors ${cardTint}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-600 border border-sky-800">
                             #{item.uid}
                           </span>
-                          <h4 className="font-bold text-amber-400 text-sm">{item.companyName}</h4>
+                          <h4 className={`font-bold text-sm ${nameColor}`}>{item.companyName}</h4>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {item.isUpdated ? (
+                          {isLeave ? (
+                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-semibold flex items-center gap-1">
+                              <UserX className="w-3 h-3 text-rose-400" />
+                              On Leave
+                            </span>
+                          ) : isTravel ? (
+                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 font-semibold flex items-center gap-1">
+                              <Plane className="w-3 h-3 text-purple-400" />
+                              Travelling
+                            </span>
+                          ) : item.isUpdated ? (
                             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold flex items-center gap-1">
                               <CheckCircle className="w-3 h-3 text-emerald-400" />
                               Follow Up Saved
@@ -658,7 +688,8 @@ export const EveningReportModule: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
