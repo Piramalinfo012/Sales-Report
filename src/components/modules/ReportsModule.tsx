@@ -15,6 +15,7 @@ export const ReportsModule: React.FC = () => {
   const [managerFilter, setManagerFilter] = useState('All');
   const [cityFilter, setCityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [followUpTypeFilter, setFollowUpTypeFilter] = useState('All');
 
   // Collect unique filter choices
   const salesPersons = Array.from(new Set(morningPlans.map(p => p.salesPersonName)));
@@ -132,8 +133,103 @@ export const ReportsModule: React.FC = () => {
     if (salesPersonFilter !== 'All' && item.salesPerson !== salesPersonFilter) return false;
     if (cityFilter !== 'All' && item.city !== cityFilter) return false;
     if (statusFilter !== 'All' && item.visited !== statusFilter) return false;
+    // Morning Follow Up = plan only, no evening entry submitted yet (visited === 'Pending')
+    // Evening Follow Up = an evening entry already exists (visited is 'Yes' or 'No')
+    if (followUpTypeFilter === 'Morning' && item.visited !== 'Pending') return false;
+    if (followUpTypeFilter === 'Evening' && item.visited === 'Pending') return false;
     return true;
   });
+
+  // ===== Sales Person Summary Report (all-time totals, not affected by the filters above) =====
+  const salesPersonSummary = useMemo(() => {
+    const map = new Map<string, { name: string; planned: number; actual: number; leave: number; travel: number }>();
+    combinedData.forEach(item => {
+      const key = item.salesPerson.trim().toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, { name: item.salesPerson, planned: 0, actual: 0, leave: 0, travel: 0 });
+      }
+      const entry = map.get(key)!;
+      if (item.partyName === 'On Leave') {
+        entry.leave += 1;
+      } else if (item.partyName === 'Travelling') {
+        entry.travel += 1;
+      } else {
+        entry.planned += 1;
+        if (item.visited === 'Yes') entry.actual += 1;
+      }
+    });
+
+    return Array.from(map.values())
+      .map(s => ({ ...s, pending: Math.max(s.planned - s.actual, 0) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [combinedData]);
+
+  const exportSummaryToCSV = () => {
+    if (salesPersonSummary.length === 0) return;
+    const headers = ['Sales Person', 'Total Planned', 'Total Actual', 'Total Pending', 'On Leave Days', 'Travelling Days'];
+    const rows = salesPersonSummary.map(s => [`"${s.name}"`, s.planned, s.actual, s.pending, s.leave, s.travel]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `Sales_Person_Summary_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('success', 'CSV Exported', 'Sales person summary downloaded successfully.');
+  };
+
+  const exportSummaryToExcel = () => {
+    if (salesPersonSummary.length === 0) return;
+    const worksheet = XLSX.utils.json_to_sheet(salesPersonSummary.map(s => ({
+      'Sales Person': s.name,
+      'Total Planned': s.planned,
+      'Total Actual': s.actual,
+      'Total Pending': s.pending,
+      'On Leave Days': s.leave,
+      'Travelling Days': s.travel,
+    })));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Person Summary');
+    XLSX.writeFile(workbook, `Sales_Person_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('success', 'Excel Exported', 'Sales person summary workbook downloaded successfully.');
+  };
+
+  const exportSummaryToPDF = () => {
+    if (salesPersonSummary.length === 0) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Sales Person Summary Report (All-Time)', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+    let y = 42;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sales Person', 14, y);
+    doc.text('Planned', 90, y);
+    doc.text('Actual', 118, y);
+    doc.text('Pending', 144, y);
+    doc.text('Leave', 170, y);
+    y += 6;
+    doc.setDrawColor(180);
+    doc.line(14, y - 4, 196, y - 4);
+
+    doc.setFont('helvetica', 'normal');
+    salesPersonSummary.forEach(s => {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(s.name, 14, y);
+      doc.text(String(s.planned), 90, y);
+      doc.text(String(s.actual), 118, y);
+      doc.text(String(s.pending), 144, y);
+      doc.text(String(s.leave), 170, y);
+      y += 7;
+    });
+
+    doc.save(`Sales_Person_Summary_${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('success', 'PDF Exported', 'Sales person summary PDF downloaded.');
+  };
 
   // Export handlers
   const exportToCSV = () => {
@@ -247,7 +343,7 @@ export const ReportsModule: React.FC = () => {
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
         <div>
           <label className="block text-slate-400 mb-1 font-semibold">Report Period</label>
           <select
@@ -300,6 +396,19 @@ export const ReportsModule: React.FC = () => {
             <option value="Yes">Visited</option>
             <option value="No">Not Visited</option>
             <option value="Pending">Pending</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-slate-400 mb-1 font-semibold">Follow Up Type</label>
+          <select
+            value={followUpTypeFilter}
+            onChange={(e) => setFollowUpTypeFilter(e.target.value)}
+            className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+          >
+            <option value="All">Morning + Evening</option>
+            <option value="Morning">Morning Follow Up (Pending)</option>
+            <option value="Evening">Evening Follow Up (Submitted)</option>
           </select>
         </div>
       </div>
@@ -601,6 +710,76 @@ export const ReportsModule: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Sales Person Summary Report (all-time Plan vs Actual per person) */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="font-bold text-sm text-white flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-sky-600" />
+            <span>Sales Person Summary Report (All-Time) — {salesPersonSummary.length} Reps</span>
+          </h2>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportSummaryToPDF}
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Export Summary as PDF Document"
+            >
+              <FileText className="w-4 h-4" />
+              <span>PDF</span>
+            </button>
+            <button
+              onClick={exportSummaryToExcel}
+              className="px-3.5 py-2.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Export Summary as Excel File"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Excel</span>
+            </button>
+            <button
+              onClick={exportSummaryToCSV}
+              className="px-3.5 py-2.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-600 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Export Summary as CSV File"
+            >
+              <FileCode className="w-4 h-4" />
+              <span>CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/80 border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4">Sales Person</th>
+                <th className="py-3 px-4">Total Planned</th>
+                <th className="py-3 px-4">Total Actual</th>
+                <th className="py-3 px-4">Total Pending</th>
+                <th className="py-3 px-4">On Leave</th>
+                <th className="py-3 px-4">Travelling</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {salesPersonSummary.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-6 px-4 text-center text-slate-500">No data available yet.</td>
+                </tr>
+              ) : (
+                salesPersonSummary.map((s) => (
+                  <tr key={s.name} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 font-semibold text-white">{s.name}</td>
+                    <td className="py-3 px-4 font-bold text-sky-400">{s.planned}</td>
+                    <td className="py-3 px-4 font-bold text-emerald-400">{s.actual}</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">{s.pending}</td>
+                    <td className="py-3 px-4 font-bold text-rose-400">{s.leave}</td>
+                    <td className="py-3 px-4 font-bold text-purple-400">{s.travel}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Report Data Table */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">

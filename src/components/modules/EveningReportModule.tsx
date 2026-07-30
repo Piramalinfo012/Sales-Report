@@ -30,6 +30,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+interface EveningCompanyEntry {
+  id: string;
+  partyName: string;
+  address: string;
+  client: string;
+  contactNumber: string;
+  designation: string;
+  remarks: string;
+  nextFollowUpDate: string;
+}
+
 interface SalesPersonGroup {
   salesPersonName: string;
   meetingDate: string;
@@ -88,9 +99,35 @@ export const EveningReportModule: React.FC = () => {
   const [existingAttachmentUrls, setExistingAttachmentUrls] = useState('');
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
 
+  // "New Evening Entry" (not tied to a specific planned company) allows adding multiple companies at once
+  const [isNewEntryMode, setIsNewEntryMode] = useState(false);
+  const blankEveningCompany = (): EveningCompanyEntry => ({
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+    partyName: '',
+    address: '',
+    client: '',
+    contactNumber: '',
+    designation: '',
+    remarks: '',
+    nextFollowUpDate: getIndianDateString(new Date(Date.now() + 86400000 * 3)),
+  });
+  const [eveningCompanies, setEveningCompanies] = useState<EveningCompanyEntry[]>([blankEveningCompany()]);
+
+  const addEveningCompanyRow = () => {
+    setEveningCompanies(prev => [...prev, blankEveningCompany()]);
+  };
+  const removeEveningCompanyRow = (id: string) => {
+    if (eveningCompanies.length <= 1) return;
+    setEveningCompanies(prev => prev.filter(c => c.id !== id));
+  };
+  const updateEveningCompanyField = (id: string, field: keyof EveningCompanyEntry, value: string) => {
+    setEveningCompanies(prev => prev.map(c => (c.id === id ? { ...c, [field]: value } : c)));
+  };
+
   // Open update modal for a specific Morning Plan / Company item
   const openUpdateModal = (plan?: MorningPlan, existingReport?: EveningReport, defaultSalesPerson?: string, defaultParty?: string, defaultDate?: string, defaultUid?: string, defaultAddress?: string, defaultClient?: string, defaultContact?: string) => {
     if (plan) {
+      setIsNewEntryMode(false);
       setActivePlan(plan);
       setUid(plan.id);
       setReportDate(plan.meetingDate || getIndianDateString());
@@ -106,6 +143,7 @@ export const EveningReportModule: React.FC = () => {
       setAttachmentFiles([]);
       setExistingAttachmentUrls(existingReport?.attachmentUrls || '');
     } else if (existingReport) {
+      setIsNewEntryMode(false);
       setActivePlan(null);
       setUid(existingReport.morningPlanId || existingReport.id);
       setEditingReportId(existingReport.id);
@@ -121,6 +159,8 @@ export const EveningReportModule: React.FC = () => {
       setAttachmentFiles([]);
       setExistingAttachmentUrls(existingReport.attachmentUrls || '');
     } else {
+      // Fresh "New Evening Entry" — not tied to a specific planned company, so allow multiple companies
+      setIsNewEntryMode(true);
       setActivePlan(null);
       setUid(defaultUid || 'MP-' + Date.now());
       setReportDate(defaultDate || getIndianDateString());
@@ -135,6 +175,7 @@ export const EveningReportModule: React.FC = () => {
       setEditingReportId(null);
       setAttachmentFiles([]);
       setExistingAttachmentUrls('');
+      setEveningCompanies([blankEveningCompany()]);
     }
     setShowModal(true);
   };
@@ -175,6 +216,74 @@ export const EveningReportModule: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isNewEntryMode) {
+      const validCompanies = eveningCompanies.filter(c => c.partyName.trim() !== '');
+      if (validCompanies.length === 0) {
+        showToast('error', 'Incomplete Form', 'Please enter at least one Company Name.');
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      let uploadedUrls: string[] = [];
+      if (attachmentFiles.length > 0) {
+        setIsUploadingAttachments(true);
+        const results = await Promise.all(
+          attachmentFiles.map(file => uploadFileToDrive(file, EVENING_ATTACHMENT_FOLDER_ID))
+        );
+        setIsUploadingAttachments(false);
+
+        uploadedUrls = results.filter((url): url is string => !!url);
+        if (uploadedUrls.length < attachmentFiles.length) {
+          showToast('warning', 'Some Attachments Failed', `${attachmentFiles.length - uploadedUrls.length} of ${attachmentFiles.length} file(s) could not be uploaded.`);
+        }
+      }
+      const multiAttachmentUrls = uploadedUrls.filter(Boolean).join(', ');
+
+      // Capture location once for this batch of visits
+      const gpsRec = await captureGPSLocation('Evening Follow Up Submission');
+
+      try {
+        let count = 0;
+        for (const company of validCompanies) {
+          const companyReportData: Omit<EveningReport, 'id' | 'submittedAt'> = {
+            salesPersonId: user?.id || 'SALES01',
+            salesPersonName: salesPersonName || user?.userName || 'Sales Exec',
+            meetingDate: reportDate,
+            partyName: company.partyName.trim(),
+            address: company.address.trim(),
+            client: company.client.trim(),
+            contactNumber: company.contactNumber.trim(),
+            designation: company.designation.trim(),
+            remarks: company.remarks.trim(),
+            discussion: company.remarks.trim(),
+            followUpDate: company.nextFollowUpDate ? getIndianDateString(company.nextFollowUpDate) : getIndianDateString(),
+            visited: 'Yes',
+            status: 'Completed',
+            latitude: gpsRec?.latitude,
+            longitude: gpsRec?.longitude,
+            attachmentUrls: multiAttachmentUrls,
+          };
+
+          const createdCompanyReport = await submitEveningReportToSheet(companyReportData);
+          addEveningReport(createdCompanyReport);
+          count++;
+        }
+
+        showToast('success', 'Evening Follow Up Saved', `${count} compan${count > 1 ? 'ies' : 'y'} recorded.`);
+
+        setEveningCompanies([blankEveningCompany()]);
+        setAttachmentFiles([]);
+        setShowModal(false);
+      } catch (err: any) {
+        showToast('error', 'Submission Error', err.message || 'Could not save report.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (!partyName) {
       showToast('error', 'Incomplete Form', 'Please enter Company Name.');
       return;
@@ -370,7 +479,9 @@ export const EveningReportModule: React.FC = () => {
 
       if (!matchesDate || !matchesSearch) return;
 
-      const key = `${item.salesPersonName}___${item.date}`;
+      // Normalize name casing/whitespace so the same person's entries always land in one card,
+      // even if one form submission was typed with different capitalization.
+      const key = `${item.salesPersonName.trim().toLowerCase()}___${item.date}`;
       if (!map.has(key)) {
         map.set(key, {
           salesPersonName: item.salesPersonName,
@@ -727,18 +838,20 @@ export const EveningReportModule: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 {/* 1. Uid & Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Uid (ID)</label>
-                    <input
-                      type="text"
-                      value={uid}
-                      onChange={(e) => setUid(e.target.value)}
-                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 font-mono"
-                      required
-                    />
-                  </div>
+                  {!isNewEntryMode && (
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Uid (ID)</label>
+                      <input
+                        type="text"
+                        value={uid}
+                        onChange={(e) => setUid(e.target.value)}
+                        className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 font-mono"
+                        required
+                      />
+                    </div>
+                  )}
 
-                  <div>
+                  <div className={isNewEntryMode ? 'sm:col-span-2' : ''}>
                     <label className="block text-slate-300 font-semibold mb-1">Date (DD-MM-YYYY)</label>
                     <input
                       type="date"
@@ -752,7 +865,7 @@ export const EveningReportModule: React.FC = () => {
 
                 {/* 2. Sales Person Name & Company Name */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  <div className={isNewEntryMode ? 'sm:col-span-2' : ''}>
                     <label className="block text-slate-300 font-semibold mb-1">Sales Person Name</label>
                     <input
                       type="text"
@@ -764,19 +877,143 @@ export const EveningReportModule: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      value={partyName}
-                      onChange={(e) => setPartyName(e.target.value)}
-                      placeholder="e.g. Reliance Retail Logistics"
-                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-amber-300 font-semibold"
-                      required
-                    />
-                  </div>
+                  {!isNewEntryMode && (
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Company Name</label>
+                      <input
+                        type="text"
+                        value={partyName}
+                        onChange={(e) => setPartyName(e.target.value)}
+                        placeholder="e.g. Reliance Retail Logistics"
+                        className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-amber-300 font-semibold"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
 
+                {isNewEntryMode ? (
+                  /* Multiple companies for a fresh Evening Entry */
+                  <div className="space-y-4 pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-sky-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <Building className="w-3.5 h-3.5 text-sky-600" />
+                        Companies Visited ({eveningCompanies.length})
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addEveningCompanyRow}
+                        className="px-2.5 py-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 rounded-lg text-[11px] font-semibold flex items-center gap-1 border border-sky-500/30 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Another Company</span>
+                      </button>
+                    </div>
+
+                    {eveningCompanies.map((company, index) => (
+                      <div key={company.id} className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-3 relative">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
+                          <span className="font-semibold text-slate-300 text-[11px]">
+                            Company #{index + 1}
+                          </span>
+                          {eveningCompanies.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEveningCompanyRow(company.id)}
+                              className="text-rose-400 hover:text-rose-300 p-1 rounded-md hover:bg-rose-950/40 transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
+                              title="Remove Company"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-medium mb-1 text-[11px]">
+                            Company Name <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={company.partyName}
+                            onChange={(e) => updateEveningCompanyField(company.id, 'partyName', e.target.value)}
+                            placeholder="e.g. Reliance Retail Logistics"
+                            className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-amber-300 font-semibold text-xs focus:outline-none focus:border-sky-500"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-slate-300 font-medium mb-1 text-[11px]">Address</label>
+                            <input
+                              type="text"
+                              value={company.address}
+                              onChange={(e) => updateEveningCompanyField(company.id, 'address', e.target.value)}
+                              placeholder="e.g. Plot 44, MIDC Industrial Area"
+                              className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-300 font-medium mb-1 text-[11px]">Client (Contact Person)</label>
+                            <input
+                              type="text"
+                              value={company.client}
+                              onChange={(e) => updateEveningCompanyField(company.id, 'client', e.target.value)}
+                              placeholder="e.g. Rajesh Mehta"
+                              className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-slate-300 font-medium mb-1 text-[11px]">Contact Number</label>
+                            <input
+                              type="text"
+                              value={company.contactNumber}
+                              onChange={(e) => updateEveningCompanyField(company.id, 'contactNumber', e.target.value)}
+                              placeholder="e.g. +91 98201 12345"
+                              className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-300 font-medium mb-1 text-[11px]">Designation</label>
+                            <input
+                              type="text"
+                              value={company.designation}
+                              onChange={(e) => updateEveningCompanyField(company.id, 'designation', e.target.value)}
+                              placeholder="e.g. Purchase Manager"
+                              className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-medium mb-1 text-[11px]">Remarks</label>
+                          <textarea
+                            value={company.remarks}
+                            onChange={(e) => updateEveningCompanyField(company.id, 'remarks', e.target.value)}
+                            rows={2}
+                            placeholder="Meeting discussion outcome, feedback, or follow-up notes..."
+                            className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-medium mb-1 text-[11px]">Next Follow Up Date (DD-MM-YYYY)</label>
+                          <input
+                            type="date"
+                            value={convertDDMMYYYYToInputDate(company.nextFollowUpDate)}
+                            onChange={(e) => updateEveningCompanyField(company.id, 'nextFollowUpDate', convertInputDateToDDMMYYYY(e.target.value))}
+                            className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-sky-600 font-semibold text-xs focus:outline-none focus:border-sky-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                <>
                 {/* 3. Address & Client */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -849,6 +1086,8 @@ export const EveningReportModule: React.FC = () => {
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sky-600 font-semibold"
                   />
                 </div>
+                </>
+                )}
 
                 {/* 7. Attachments */}
                 <div>
@@ -921,7 +1160,7 @@ export const EveningReportModule: React.FC = () => {
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Save Evening Follow Up</span>
+                      <span>{isNewEntryMode ? `Save Evening Follow Up (${eveningCompanies.length})` : 'Save Evening Follow Up'}</span>
                     </>
                   )}
                 </button>
