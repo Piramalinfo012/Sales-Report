@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationTab } from '../dashboard/DashboardContainer';
-import { getIndianDateString, isDateWithinRange } from '../../utils/dateUtils';
+import { getIndianDateString, parseDDMMYYYYToDate } from '../../utils/dateUtils';
 import {
   Bell,
   LogOut,
   User,
   Menu,
   Sparkles,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
   Sun,
   Moon,
   UserX
@@ -39,10 +36,30 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
 
   // Sales department persons currently on approved leave for today's date
   const todayStr = getIndianDateString();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  // Checks whether today falls inside a leave's date range. If the sheet's FROM/TO
+  // span is wildly larger than the stated "Total No of leaves days" (a data-entry
+  // typo in the TO date, e.g. wrong month), the range is capped to the stated
+  // duration instead of trusting the raw TO date.
+  const isOnLeaveToday = (l: typeof leaveRecords[number]): boolean => {
+    const today = parseDDMMYYYYToDate(todayStr);
+    const from = parseDDMMYYYYToDate(l.dateFrom);
+    if (!today || !from) return false;
+
+    let to = parseDDMMYYYYToDate(l.dateTo) || from;
+    const spanDays = Math.round((to.getTime() - from.getTime()) / MS_PER_DAY) + 1;
+    if (l.totalLeaveDays > 0 && spanDays > l.totalLeaveDays * 2 + 3) {
+      to = new Date(from.getTime() + (Math.ceil(l.totalLeaveDays) - 1) * MS_PER_DAY);
+    }
+
+    return today >= from && today <= to;
+  };
+
   const leaveNotifications = leaveRecords
     .filter(l => (l.department || '').trim().toLowerCase() === 'sales')
     .filter(l => (l.status || '').trim().toLowerCase() === 'approved')
-    .filter(l => isDateWithinRange(todayStr, l.dateFrom, l.dateTo))
+    .filter(isOnLeaveToday)
     .map(l => ({
       id: `leave-${l.id}`,
       title: `${l.requestedBy} is on Leave Today`,
@@ -51,33 +68,6 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
       icon: UserX,
       color: 'text-rose-400 bg-rose-950/40 border-rose-800/40',
     }));
-
-  const sampleNotifications = [
-    {
-      id: 1,
-      title: 'Morning Plan Reminder',
-      desc: 'Submit today\'s meetings before 10:00 AM',
-      time: '09:00 AM',
-      icon: Clock,
-      color: 'text-amber-400 bg-amber-950/40 border-amber-800/40',
-    },
-    {
-      id: 2,
-      title: 'Pending Follow-up Alert',
-      desc: 'You have pending client follow-ups due today',
-      time: '11:30 AM',
-      icon: AlertCircle,
-      color: 'text-sky-600 bg-sky-950/40 border-sky-800/40',
-    },
-    {
-      id: 3,
-      title: 'Evening Report Reminder',
-      desc: 'Update visit logs and upload photos by 06:00 PM',
-      time: '05:00 PM',
-      icon: CheckCircle2,
-      color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/40',
-    },
-  ];
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 px-4 md:px-6 flex items-center justify-between text-slate-100">
@@ -134,7 +124,9 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
             title="Notifications"
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-slate-900" />
+            {leaveNotifications.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-slate-900" />
+            )}
           </button>
 
           <AnimatePresence>
@@ -148,34 +140,38 @@ export const Header: React.FC<HeaderProps> = ({ onTabChange, toggleSidebarMobile
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <h3 className="font-semibold text-sm text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-sky-600" />
-                    <span>Daily System Reminders</span>
+                    <span>Sales Team On Leave</span>
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-600 border border-sky-800">
-                    {leaveNotifications.length + sampleNotifications.length} Active
+                    {leaveNotifications.length} Active
                   </span>
                 </div>
 
                 <div className="space-y-2.5">
-                  {[...leaveNotifications, ...sampleNotifications].map((n) => {
-                    const Icon = n.icon;
-                    return (
-                      <div
-                        key={n.id}
-                        className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-all flex items-start gap-2.5"
-                      >
-                        <div className={`p-1.5 rounded-lg border ${n.color} shrink-0 mt-0.5`}>
-                          <Icon className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-semibold text-slate-100">{n.title}</h4>
-                            <span className="text-[10px] text-slate-500">{n.time}</span>
+                  {leaveNotifications.length === 0 ? (
+                    <p className="text-xs text-slate-500 text-center py-4">No notifications right now.</p>
+                  ) : (
+                    leaveNotifications.map((n) => {
+                      const Icon = n.icon;
+                      return (
+                        <div
+                          key={n.id}
+                          className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-all flex items-start gap-2.5"
+                        >
+                          <div className={`p-1.5 rounded-lg border ${n.color} shrink-0 mt-0.5`}>
+                            <Icon className="w-3.5 h-3.5" />
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{n.desc}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-semibold text-slate-100">{n.title}</h4>
+                              <span className="text-[10px] text-slate-500">{n.time}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{n.desc}</p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </motion.div>
             )}
