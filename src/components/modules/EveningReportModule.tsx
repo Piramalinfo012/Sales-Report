@@ -36,6 +36,7 @@ interface EveningCompanyEntry {
   address: string;
   client: string;
   contactNumber: string;
+  email: string;
   designation: string;
   remarks: string;
   nextFollowUpDate: string;
@@ -54,6 +55,7 @@ interface SalesPersonGroup {
     address: string;
     client: string;
     contactNumber: string;
+    email: string;
     designation: string;
     remarks: string;
     nextFollowUpDate: string;
@@ -87,6 +89,7 @@ export const EveningReportModule: React.FC = () => {
   const [address, setAddress] = useState('');
   const [client, setClient] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [designation, setDesignation] = useState('');
   const [remarks, setRemarks] = useState('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState(
@@ -107,6 +110,7 @@ export const EveningReportModule: React.FC = () => {
     address: '',
     client: '',
     contactNumber: '',
+    email: '',
     designation: '',
     remarks: '',
     nextFollowUpDate: getIndianDateString(new Date(Date.now() + 86400000 * 3)),
@@ -125,7 +129,7 @@ export const EveningReportModule: React.FC = () => {
   };
 
   // Open update modal for a specific Morning Plan / Company item
-  const openUpdateModal = (plan?: MorningPlan, existingReport?: EveningReport, defaultSalesPerson?: string, defaultParty?: string, defaultDate?: string, defaultUid?: string, defaultAddress?: string, defaultClient?: string, defaultContact?: string) => {
+  const openUpdateModal = (plan?: MorningPlan, existingReport?: EveningReport, defaultSalesPerson?: string, defaultParty?: string, defaultDate?: string, defaultUid?: string, defaultAddress?: string, defaultClient?: string, defaultContact?: string, defaultEmail?: string) => {
     if (plan) {
       setIsNewEntryMode(false);
       setActivePlan(plan);
@@ -136,6 +140,7 @@ export const EveningReportModule: React.FC = () => {
       setAddress(plan.address || plan.city || '');
       setClient(existingReport?.client || plan.contactPerson || '');
       setContactNumber(existingReport?.contactNumber || plan.mobileNumber || '');
+      setEmail(existingReport?.email || '');
       setDesignation(existingReport?.designation || '');
       setRemarks(existingReport?.remarks || existingReport?.discussion || plan.remarks || '');
       setNextFollowUpDate(existingReport?.followUpDate || getIndianDateString(new Date(Date.now() + 86400000 * 3)));
@@ -153,6 +158,7 @@ export const EveningReportModule: React.FC = () => {
       setAddress(existingReport.address || '');
       setClient(existingReport.client || '');
       setContactNumber(existingReport.contactNumber || '');
+      setEmail(existingReport.email || '');
       setDesignation(existingReport.designation || '');
       setRemarks(existingReport.remarks || existingReport.discussion || '');
       setNextFollowUpDate(existingReport.followUpDate || getIndianDateString(new Date(Date.now() + 86400000 * 3)));
@@ -169,6 +175,7 @@ export const EveningReportModule: React.FC = () => {
       setAddress(defaultAddress || '');
       setClient(defaultClient || '');
       setContactNumber(defaultContact || '');
+      setEmail(defaultEmail || '');
       setDesignation('');
       setRemarks('');
       setNextFollowUpDate(getIndianDateString(new Date(Date.now() + 86400000 * 3)));
@@ -199,6 +206,7 @@ export const EveningReportModule: React.FC = () => {
               reportObj: undefined,
               client: item.planObj?.contactPerson || '',
               contactNumber: item.planObj?.mobileNumber || '',
+              email: '',
               remarks: item.planObj?.remarks || '',
               nextFollowUpDate: ''
             };
@@ -255,6 +263,7 @@ export const EveningReportModule: React.FC = () => {
             address: company.address.trim(),
             client: company.client.trim(),
             contactNumber: company.contactNumber.trim(),
+            email: company.email.trim(),
             designation: company.designation.trim(),
             remarks: company.remarks.trim(),
             discussion: company.remarks.trim(),
@@ -319,6 +328,7 @@ export const EveningReportModule: React.FC = () => {
       address,
       client,
       contactNumber,
+      email,
       designation,
       remarks,
       discussion: remarks,
@@ -354,6 +364,7 @@ export const EveningReportModule: React.FC = () => {
                 ...item,
                 client,
                 contactNumber,
+                email,
                 designation,
                 remarks,
                 nextFollowUpDate: reportData.followUpDate,
@@ -388,6 +399,7 @@ export const EveningReportModule: React.FC = () => {
       address: string;
       client: string;
       contactNumber: string;
+      email: string;
       designation: string;
       remarks: string;
       nextFollowUpDate: string;
@@ -415,6 +427,7 @@ export const EveningReportModule: React.FC = () => {
         address: plan.address || plan.city || '',
         client: matchedReport?.client || plan.contactPerson || '',
         contactNumber: matchedReport?.contactNumber || plan.mobileNumber || '',
+        email: matchedReport?.email || '',
         designation: matchedReport?.designation || '',
         remarks: matchedReport?.remarks || matchedReport?.discussion || plan.remarks || '',
         nextFollowUpDate: matchedReport?.followUpDate || '',
@@ -445,6 +458,7 @@ export const EveningReportModule: React.FC = () => {
         address: report.address || '',
         client: report.client || '',
         contactNumber: report.contactNumber || '',
+        email: report.email || '',
         designation: report.designation || '',
         remarks: report.remarks || report.discussion || '',
         nextFollowUpDate: report.followUpDate || '',
@@ -475,6 +489,7 @@ export const EveningReportModule: React.FC = () => {
         item.address.toLowerCase().includes(q) ||
         item.client.toLowerCase().includes(q) ||
         item.contactNumber.toLowerCase().includes(q) ||
+        (item.email && item.email.toLowerCase().includes(q)) ||
         item.remarks.toLowerCase().includes(q);
 
       if (!matchesDate || !matchesSearch) return;
@@ -747,7 +762,8 @@ export const EveningReportModule: React.FC = () => {
                               item.uid,
                               item.address,
                               item.client,
-                              item.contactNumber
+                              item.contactNumber,
+                              item.email
                             )}
                             className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-sky-500/20 flex items-center gap-1.5 cursor-pointer"
                           >
@@ -780,7 +796,7 @@ export const EveningReportModule: React.FC = () => {
                           <span className="text-[10px] text-slate-500 font-medium block">Client / Contact</span>
                           <p className="text-slate-300 font-medium truncate flex items-center gap-1">
                             <UserCheck className="w-3 h-3 text-sky-600 shrink-0" />
-                            <span>{item.client || 'N/A'} ({item.contactNumber || 'N/A'})</span>
+                            <span>{item.client || 'N/A'} ({item.contactNumber || 'N/A'}){item.email ? ` - ${item.email}` : ''}</span>
                           </p>
                         </div>
 
@@ -978,6 +994,16 @@ export const EveningReportModule: React.FC = () => {
                             />
                           </div>
                           <div>
+                            <label className="block text-slate-300 font-medium mb-1 text-[11px]">Email</label>
+                            <input
+                              type="email"
+                              value={company.email}
+                              onChange={(e) => updateEveningCompanyField(company.id, 'email', e.target.value)}
+                              placeholder="e.g. name@example.com"
+                              className="w-full p-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
+                          <div>
                             <label className="block text-slate-300 font-medium mb-1 text-[11px]">Designation</label>
                             <input
                               type="text"
@@ -1039,7 +1065,7 @@ export const EveningReportModule: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4. Contact Number & Designation */}
+                {/* 4. Contact Number, Email & Designation */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">Contact Number</label>
@@ -1051,7 +1077,16 @@ export const EveningReportModule: React.FC = () => {
                       className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white"
                     />
                   </div>
-
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. name@example.com"
+                      className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white"
+                    />
+                  </div>
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">Designation</label>
                     <input

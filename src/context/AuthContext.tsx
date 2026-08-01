@@ -329,15 +329,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEveningReports(prev => [report, ...prev]);
   };
 
-  const updateMorningPlan = async (plan: MorningPlan) => {
-    setMorningPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
-    const rowArray = [
-      plan.id, plan.salesPersonId, plan.salesPersonName, plan.meetingDate, plan.partyName,
-      plan.contactPerson, plan.mobileNumber, plan.city, plan.purpose, plan.expectedBusiness,
-      plan.priority, plan.remarks, plan.status, plan.createdAt, plan.latitude || '', plan.longitude || '', plan.address || ''
-    ];
-    await updateSheetRow('MorningPlan', plan.id, rowArray);
-  };
+    const updateMorningPlan = async (plan: MorningPlan) => {
+      setMorningPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
+      
+      const morningFollowUpArray = [
+        plan.id,
+        plan.meetingDate || '',
+        plan.salesPersonName || '',
+        plan.partyName || '',
+        plan.address || plan.city || '',
+        plan.remarks || plan.purpose || '',
+      ];
+
+      const fullRowArray = [
+        plan.id, plan.salesPersonId, plan.salesPersonName, plan.meetingDate, plan.partyName,
+        plan.contactPerson, plan.mobileNumber, plan.city, plan.purpose, plan.expectedBusiness,
+        plan.priority, plan.remarks, plan.status, plan.createdAt, plan.latitude || '', plan.longitude || '', 
+plan.address || ''
+      ];
+
+      await updateSheetRow('Morning Follow Up', plan.id, morningFollowUpArray);
+      await updateSheetRow('MorningPlan', plan.id, fullRowArray);
+    };
   const deleteMorningPlan = async (id: string): Promise<boolean> => {
     const previous = morningPlans;
     setMorningPlans(prev => prev.filter(p => p.id !== id));
@@ -354,14 +367,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return primarySuccess;
   };
-  const updateEveningReport = async (report: EveningReport) => {
-    setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
-    const rowArray = [
-      report.id, report.morningPlanId, report.date, report.salesPersonName, report.partyName,
-      report.visited, report.discussion, report.expectedOrder, report.orderProbability, report.nextFollowUpDate, report.createdAt
-    ];
-    await updateSheetRow('EveningReport', report.id, rowArray);
-  };
+    const updateEveningReport = async (report: EveningReport) => {
+      setEveningReports(prev => prev.map(p => p.id === report.id ? report : p));
+      
+      const eveningFollowUpArray = [
+        report.id,
+        report.meetingDate || '',
+        report.salesPersonName || '',
+        report.partyName || '',
+        report.address || '',
+        report.client || '',
+        report.contactNumber || '',
+        report.designation || '',
+        report.remarks || report.discussion || '',
+        report.followUpDate || '',
+        report.attachmentUrls || '',
+      ];
+
+      const fullRowArray = [
+        report.id,
+        report.morningPlanId || '',
+        report.salesPersonId || '',
+        report.salesPersonName || '',
+        report.partyName || '',
+        report.visited || 'Yes',
+        report.meetingTime || '',
+        report.discussion || report.remarks || '',
+        report.productsDiscussed || '',
+        report.requirement || '',
+        report.followUpDate || '',
+        report.expectedOrder || 0,
+        report.orderProbability || 0,
+        report.remarks || '',
+        report.status || 'Completed',
+        report.submittedAt || '',
+        report.photoUrl || '',
+        report.latitude || '',
+        report.longitude || '',
+        report.address || '',
+      ];
+
+      await updateSheetRow('Evening Follow Up', report.id, eveningFollowUpArray);
+      await updateSheetRow('EveningReport', report.id, fullRowArray);
+    };
   const deleteEveningReport = async (id: string): Promise<boolean> => {
     const previous = eveningReports;
     setEveningReports(prev => prev.filter(p => p.id !== id));
