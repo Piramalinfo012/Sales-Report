@@ -22,11 +22,19 @@ export function getIndianDateString(input?: Date | string | number): string {
       const [y, m, d] = trimmed.split('-');
       return `${d}-${m}-${y}`;
     }
-    // ISO string with T
+    // ISO string with T or colon (typically from Google Sheets API)
     if (trimmed.includes('T') || trimmed.includes(':')) {
       const dateObj = new Date(trimmed);
       if (!isNaN(dateObj.getTime())) {
-        return formatToDDMMYYYYParts(dateObj);
+        // Fix Google Sheets US Locale date swapping bug:
+        // When Google Sheets parses DD-MM-YYYY (e.g. 01-08-2026) in US locale,
+        // it treats DD as month (01 = Jan) and MM as day (08 = 8th).
+        // So the date returned is Jan 8th instead of Aug 1st.
+        // We swap the day and month back to recover the original DD-MM-YYYY.
+        const d = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const m = String(dateObj.getDate()).padStart(2, '0');
+        const y = dateObj.getFullYear();
+        return `${d}-${m}-${y}`;
       }
     }
   }
