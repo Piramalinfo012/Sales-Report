@@ -25,7 +25,12 @@ export const ReportsModule: React.FC = () => {
 
   // Combine reports and morning plans for report view
   const combinedData = morningPlans.map(plan => {
-    const report = eveningReports.find(r => r.morningPlanId === plan.id || r.partyName === plan.partyName);
+    const report = eveningReports.find(r => r.morningPlanId === plan.id) ||
+      eveningReports.find(r =>
+        r.partyName === plan.partyName &&
+        (r.meetingDate === plan.meetingDate || r.meetingDate === getIndianDateString(plan.meetingDate)) &&
+        r.salesPersonId === plan.salesPersonId
+      );
     return {
       planId: plan.id,
       salesPerson: plan.salesPersonName,
