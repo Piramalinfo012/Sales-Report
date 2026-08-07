@@ -500,7 +500,7 @@ plan.address || ''
   };
   const updateReference = async (ref: ReferenceRecord) => {
     setReferences(prev => prev.map(p => p.id === ref.id ? ref : p));
-    const rowArray = [ref.id, ref.referenceBy, ref.partyName, ref.contactPerson, ref.mobileNumber, ref.city, ref.address, ref.nextFollowupDate, ref.requirement, ref.remark, ref.status];
+    const rowArray = [ref.id, ref.createdAt, ref.refGivenBy, ref.refGivenCompanyName, ref.allottedToSalesPersonName, ref.allottedByWhom, ref.companyName, ref.clientName, ref.designation, ref.clientNumber, ref.address, ref.remarks, ref.nextFollowupDate];
     await updateSheetRow('Reference', ref.id, rowArray);
   };
   const deleteReference = async (id: string): Promise<boolean> => {
@@ -516,7 +516,7 @@ plan.address || ''
   };
   const updateAttendanceRecord = async (rec: AttendanceRecord) => {
     setAttendanceRecords(prev => prev.map(p => p.id === rec.id ? rec : p));
-    const rowArray = [rec.id, rec.salesPersonId, rec.salesPersonName, rec.date, rec.timeIn, rec.timeOut, rec.status, rec.location];
+    const rowArray = [rec.id, rec.salesPersonId, rec.salesPersonName, rec.date, rec.punchInTime, rec.punchOutTime, rec.punchInLocation, rec.punchOutLocation, rec.status];
     await updateSheetRow('Attendance', rec.id, rowArray);
   };
   const deleteAttendanceRecord = async (id: string) => {

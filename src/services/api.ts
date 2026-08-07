@@ -45,10 +45,13 @@ export async function insertSheetRow(sheetName: string, rowArray: any[]): Promis
     params.append('action', 'insert');
     params.append('rowData', JSON.stringify(rowArray));
 
-    await fetch(APPS_SCRIPT_URL, {
+    // Fire the request without waiting for the full Apps Script round-trip
+    // so the UI isn't stuck on a loading state for every save (fast sheet dump).
+    fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: params,
-    });
+    }).catch(err => console.warn(`Saved ${sheetName} row locally due to network notice:`, err));
+
     return true;
   } catch (err) {
     console.warn(`Saved ${sheetName} row locally due to network notice:`, err);
@@ -67,10 +70,13 @@ export async function updateSheetRow(sheetName: string, id: string, rowArray: an
     params.append('id', id);
     params.append('rowData', JSON.stringify(rowArray));
 
-    await fetch(APPS_SCRIPT_URL, {
+    // Fire the request without waiting for the full Apps Script round-trip
+    // so the UI isn't stuck on a loading state for every save (fast sheet dump).
+    fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: params,
-    });
+    }).catch(err => console.warn(`Failed to update ${sheetName} row:`, err));
+
     return true;
   } catch (err) {
     console.warn(`Failed to update ${sheetName} row:`, err);

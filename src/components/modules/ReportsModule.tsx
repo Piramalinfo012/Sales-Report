@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getIndianDateString } from '../../utils/dateUtils';
+import { getIndianDateString, isDateWithinRange, convertInputDateToDDMMYYYY } from '../../utils/dateUtils';
 import { FileSpreadsheet, Download, Filter, FileText, FileCode, Search, Calendar, User, Shield, ChevronLeft, ChevronRight, UserX, Plane, X, CheckCircle2, Clock, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
@@ -16,6 +16,8 @@ export const ReportsModule: React.FC = () => {
   const [cityFilter, setCityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [followUpTypeFilter, setFollowUpTypeFilter] = useState('All');
+  const [dateFromFilter, setDateFromFilter] = useState('');
+  const [dateToFilter, setDateToFilter] = useState('');
 
   // Collect unique filter choices
   const salesPersons = Array.from(new Set(morningPlans.map(p => p.salesPersonName)));
@@ -137,6 +139,11 @@ export const ReportsModule: React.FC = () => {
     // Evening Follow Up = an evening entry already exists (visited is 'Yes' or 'No')
     if (followUpTypeFilter === 'Morning' && item.visited !== 'Pending') return false;
     if (followUpTypeFilter === 'Evening' && item.visited === 'Pending') return false;
+    if (dateFromFilter) {
+      const fromDD = convertInputDateToDDMMYYYY(dateFromFilter);
+      const toDD = dateToFilter ? convertInputDateToDDMMYYYY(dateToFilter) : fromDD;
+      if (!isDateWithinRange(item.meetingDate, fromDD, toDD)) return false;
+    }
     return true;
   });
 
@@ -343,7 +350,8 @@ export const ReportsModule: React.FC = () => {
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div>
           <label className="block text-slate-400 mb-1 font-semibold">Report Period</label>
           <select
@@ -411,6 +419,28 @@ export const ReportsModule: React.FC = () => {
             <option value="Evening">Evening Follow Up (Submitted)</option>
           </select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:max-w-md">
+        <div>
+          <label className="block text-slate-400 mb-1 font-semibold">Date From</label>
+          <input
+            type="date"
+            value={dateFromFilter}
+            onChange={(e) => setDateFromFilter(e.target.value)}
+            className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-slate-400 mb-1 font-semibold">Date To</label>
+          <input
+            type="date"
+            value={dateToFilter}
+            onChange={(e) => setDateToFilter(e.target.value)}
+            className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+          />
+        </div>
+      </div>
       </div>
 
       {/* Visit Calendar + Monthly Summary */}

@@ -48,6 +48,7 @@ export interface EveningReport {
   address?: string;
   client?: string;
   contactNumber?: string;
+  email?: string;
   designation?: string;
   visited: 'Yes' | 'No';
   meetingTime?: string;
