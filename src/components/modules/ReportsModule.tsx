@@ -44,6 +44,14 @@ export const ReportsModule: React.FC = () => {
       actualOrder: report ? report.expectedOrder : 0,
       probability: report ? `${report.orderProbability}%` : 'N/A',
       discussion: report ? report.discussion : plan.purpose,
+      address: report ? (report.address || '') : (plan.address || ''),
+      client: report ? (report.client || '') : '',
+      contactNumber: report ? (report.contactNumber || '') : (plan.mobileNumber || ''),
+      email: report ? (report.email || '') : '',
+      designation: report ? (report.designation || '') : '',
+      remarks: report ? (report.remarks || '') : (plan.remarks || ''),
+      followUpDate: report ? (report.followUpDate || '') : '',
+      attachmentUrls: report ? (report.attachmentUrls || '') : '',
     };
   });
 
@@ -245,7 +253,10 @@ export const ReportsModule: React.FC = () => {
 
   // Export handlers
   const exportToCSV = () => {
-    if (filteredData.length === 0) return;
+    if (filteredData.length === 0) {
+      showToast('error', 'No Data', 'No records match the selected filters. Adjust the filters and try again.');
+      return;
+    }
     const headers = ['Plan ID', 'Sales Rep', 'Meeting Date', 'Party Name', 'City', 'Expected Business', 'Visited Status', 'Actual Order', 'Discussion'];
     const rows = filteredData.map(d => [
       d.planId,
@@ -271,8 +282,32 @@ export const ReportsModule: React.FC = () => {
   };
 
   const exportToExcel = () => {
-    if (filteredData.length === 0) return;
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+    if (filteredData.length === 0) {
+      showToast('error', 'No Data', 'No records match the selected filters. Adjust the filters and try again.');
+      return;
+    }
+    const worksheet = XLSX.utils.json_to_sheet(filteredData.map(d => ({
+      'Plan ID': d.planId,
+      'Sales Person': d.salesPerson,
+      'Meeting Date': d.meetingDate,
+      'Company Name': d.partyName,
+      'Contact Person': d.contactPerson,
+      'City': d.city,
+      'Address': d.address,
+      'Client (Contact Person)': d.client,
+      'Contact Number': d.contactNumber,
+      'Email': d.email,
+      'Designation': d.designation,
+      'Expected Business': d.expectedBusiness,
+      'Priority': d.priority,
+      'Visited': d.visited,
+      'Actual Order': d.actualOrder,
+      'Probability': d.probability,
+      'Remarks': d.remarks,
+      'Next Follow Up Date': d.followUpDate,
+      'Attachments': d.attachmentUrls,
+      'Discussion': d.discussion,
+    })));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Daily Report');
     XLSX.writeFile(workbook, `Sales_Daily_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -280,7 +315,10 @@ export const ReportsModule: React.FC = () => {
   };
 
   const exportToPDF = () => {
-    if (filteredData.length === 0) return;
+    if (filteredData.length === 0) {
+      showToast('error', 'No Data', 'No records match the selected filters. Adjust the filters and try again.');
+      return;
+    }
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text('Sales Daily Reporting System - Master Log', 14, 20);

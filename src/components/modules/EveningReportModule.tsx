@@ -785,6 +785,14 @@ export const EveningReportModule: React.FC = () => {
                       {/* Details row */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                         <div>
+                          <span className="text-[10px] text-slate-500 font-medium block">Sales Person</span>
+                          <p className="text-slate-300 font-medium truncate flex items-center gap-1">
+                            <User className="w-3 h-3 text-sky-600 shrink-0" />
+                            <span>{item.salesPersonName || 'N/A'}</span>
+                          </p>
+                        </div>
+
+                        <div>
                           <span className="text-[10px] text-slate-500 font-medium block">Address</span>
                           <p className="text-slate-300 font-medium truncate flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
@@ -793,10 +801,34 @@ export const EveningReportModule: React.FC = () => {
                         </div>
 
                         <div>
-                          <span className="text-[10px] text-slate-500 font-medium block">Client / Contact</span>
+                          <span className="text-[10px] text-slate-500 font-medium block">Client (Contact Person)</span>
                           <p className="text-slate-300 font-medium truncate flex items-center gap-1">
                             <UserCheck className="w-3 h-3 text-sky-600 shrink-0" />
-                            <span>{item.client || 'N/A'} ({item.contactNumber || 'N/A'}){item.email ? ` - ${item.email}` : ''}</span>
+                            <span>{item.client || 'N/A'}</span>
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-slate-500 font-medium block">Contact Number</span>
+                          <p className="text-slate-300 font-medium truncate flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>{item.contactNumber || 'N/A'}</span>
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-slate-500 font-medium block">Email</span>
+                          <p className="text-slate-300 font-medium truncate flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-sky-400 shrink-0" />
+                            <span>{item.email || 'N/A'}</span>
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-slate-500 font-medium block">Designation</span>
+                          <p className="text-slate-300 font-medium truncate flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>{item.designation || 'N/A'}</span>
                           </p>
                         </div>
 
