@@ -441,8 +441,8 @@ export async function submitEveningReportToSheet(report: Omit<EveningReport, 'id
     submittedAt: getIndianDateTimeString(),
   };
 
-  // 11-column format strictly matching Google Sheet tab 'Evening Follow Up':
-  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date | Col K: Attachment
+  // 12-column format strictly matching Google Sheet tab 'Evening Follow Up':
+  // Col A: Uid | Col B: Date | Col C: Sales Person Name | Col D: Company Name | Col E: Address | Col F: Client | Col G: Contact Number | Col H: Designation | Col I: Remarks | Col J: Next Follow Up Date | Col K: Attachment | Col L: Email
   const eveningFollowUp10Cols = [
     newReport.morningPlanId || newReport.id,
     newReport.meetingDate ? getIndianDateString(newReport.meetingDate) : getIndianDateString(),
@@ -455,6 +455,7 @@ export async function submitEveningReportToSheet(report: Omit<EveningReport, 'id
     newReport.remarks || newReport.discussion || '',
     newReport.followUpDate ? getIndianDateString(newReport.followUpDate) : '',
     newReport.attachmentUrls || '',
+    newReport.email || '',
   ];
 
   const fullRowData = [
@@ -499,8 +500,8 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
           const row = rows[i];
           if (!row || row.length === 0 || !row[0]) continue;
 
-          if (row.length <= 12) {
-            // 10/11-column format: Uid | Date | Sales Person Name | Company Name | Address | Client | Contact Number | Designation | Remarks | Next Follow Up Date | Attachment
+          if (row.length <= 13) {
+            // 10/11/12-column format: Uid | Date | Sales Person Name | Company Name | Address | Client | Contact Number | Designation | Remarks | Next Follow Up Date | Attachment | Email
             const uid = String(row[0] || `ER-${i}`);
             const date = getIndianDateString(row[1] || new Date());
             const salesPersonName = String(row[2] || '');
@@ -512,6 +513,7 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
             const remarks = String(row[8] || '');
             const followUpDate = getIndianDateString(row[9] || '');
             const attachmentUrls = String(row[10] || '');
+            const email = String(row[11] || '');
 
             reports.push({
               id: uid,
@@ -523,6 +525,7 @@ export async function fetchEveningReportsFromSheet(): Promise<EveningReport[]> {
               address,
               client,
               contactNumber,
+              email,
               designation,
               visited: 'Yes',
               remarks,

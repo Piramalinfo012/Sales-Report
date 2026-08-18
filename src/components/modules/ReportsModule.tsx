@@ -24,6 +24,7 @@ export const ReportsModule: React.FC = () => {
   const cities = Array.from(new Set(morningPlans.map(p => p.city)));
 
   // Combine reports and morning plans for report view
+  const processedReportIds = new Set<string>();
   const combinedData = morningPlans.map(plan => {
     const report = eveningReports.find(r => r.morningPlanId === plan.id) ||
       eveningReports.find(r =>
@@ -31,6 +32,10 @@ export const ReportsModule: React.FC = () => {
         (r.meetingDate === plan.meetingDate || r.meetingDate === getIndianDateString(plan.meetingDate)) &&
         r.salesPersonId === plan.salesPersonId
       );
+    if (report) {
+      processedReportIds.add(report.id);
+      if (report.morningPlanId) processedReportIds.add(report.morningPlanId);
+    }
     return {
       planId: plan.id,
       salesPerson: plan.salesPersonName,
@@ -53,6 +58,37 @@ export const ReportsModule: React.FC = () => {
       followUpDate: report ? (report.followUpDate || '') : '',
       attachmentUrls: report ? (report.attachmentUrls || '') : '',
     };
+  });
+
+  // Evening entries submitted without a linked Morning Plan (e.g. "New Evening Entry") were being
+  // dropped from the report entirely since only morningPlans was iterated above — add them here so
+  // every updated follow-up, on any date, still shows up in the table/export.
+  eveningReports.forEach(report => {
+    if (!report || !report.id) return;
+    if (processedReportIds.has(report.id) || (report.morningPlanId && processedReportIds.has(report.morningPlanId))) return;
+
+    combinedData.push({
+      planId: report.morningPlanId || report.id,
+      salesPerson: report.salesPersonName,
+      meetingDate: getIndianDateString(report.meetingDate || report.submittedAt),
+      partyName: report.partyName,
+      contactPerson: report.client || '',
+      city: report.address || '',
+      expectedBusiness: 0,
+      priority: 'Medium',
+      visited: report.visited,
+      actualOrder: report.expectedOrder || 0,
+      probability: `${report.orderProbability || 0}%`,
+      discussion: report.discussion || report.remarks || '',
+      address: report.address || '',
+      client: report.client || '',
+      contactNumber: report.contactNumber || '',
+      email: report.email || '',
+      designation: report.designation || '',
+      remarks: report.remarks || '',
+      followUpDate: report.followUpDate || '',
+      attachmentUrls: report.attachmentUrls || '',
+    });
   });
 
   // ===== Visit Calendar =====
